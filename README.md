@@ -1,5 +1,5 @@
 
-![alt text](https://lite.cash/litecash_images/icon.png "Litecash Logo")
+![alt text](https://github.com/teamlite/litecash/blob/master/images/icon128.png "Litecash Logo")
 
 Litecash is the next generation scalable, confidential cryptocurrency based on an elegant and innovative [Mimblewimble protocol](https://docs.beam.mw/Mimblewimble.pdf).
 
