@@ -13,16 +13,16 @@ Component
         {
             Layout.alignment: Qt.AlignHCenter
             Layout.fillHeight: true
-            Layout.preferredWidth: 242
-            Layout.preferredHeight: 170
-            Layout.maximumHeight: 170
+            Layout.preferredWidth: 542
+            Layout.preferredHeight: 270
+            Layout.maximumHeight: 270
             Layout.minimumHeight: 120
 
             fillMode: Image.PreserveAspectFit
 
             source: "qrc:/assets/start-logo.svg"
         }
-
+/*  remove the wording for now..
         SFText 
         {
             Layout.alignment: Qt.AlignHCenter
@@ -41,7 +41,7 @@ Component
             Layout.minimumHeight: 30
             Layout.maximumHeight: 40
         }
-
+*/
         SFText
         {
             Layout.alignment: Qt.AlignHCenter
@@ -49,7 +49,7 @@ Component
             text: qsTr("The Speed of Lite")
 
             color: "#25c1ff"
-            font.pixelSize: 18
+            font.pixelSize: 32
             font.styleName: "Bold"; font.weight: Font.Bold
         }
     }

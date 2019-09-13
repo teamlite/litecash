@@ -1526,7 +1526,7 @@ Item
                 
                         text: qsTr("Enter your password to access the current wallet")
                         color: Style.white
-                        font.pixelSize: 14
+                        font.pixelSize: 16
                     }
 
                     Column {
@@ -1628,7 +1628,8 @@ Item
                             }
                         }
                     }
-                  /*  Item {
+/* remove below to hide the restore wallet option.. */
+                    Item {
                         Layout.fillHeight: true
                         Layout.minimumHeight: 30
                         Layout.maximumHeight: 65
@@ -1649,7 +1650,8 @@ Item
                             }
                             hoverEnabled: true
                         }
-                    }*/
+                    }
+/* end remove */
                     Item {
                         Layout.fillHeight: true
                         Layout.minimumHeight: 67//19

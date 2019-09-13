@@ -19,6 +19,14 @@ Rectangle {
 
     color: Style.marine
 
+/*
+	Image {
+		fillMode: Image.PreserveAspectCrop
+		anchors.fill: parent
+		source: "qrc:/assets/icon.png"
+	}
+*/
+
     MouseArea {
         id: mainMouseArea
         anchors.fill: parent
