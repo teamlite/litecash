@@ -14,6 +14,7 @@ QtObject {
 	property color navy: 			"#02253c"
 	property color marine: 			"#032e49"
 	property color litecash:		"#577284"
+	property color litecash_opt:	"#577284"
 	property color light_navy: 		"#0e3850"
 	property color bluey_grey: 		"#8da1ad"
 	property color separator_color: "#33566b"
