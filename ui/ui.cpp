@@ -1,5 +1,4 @@
 // Copyright 2018 The Beam Team
-// Copyright 2019 Litecash developers
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,12 +18,15 @@
 
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QTranslator>
 
 #include <qqmlcontext.h>
 #include "viewmodel/start_view.h"
-#include "viewmodel/restore_view.h"
+#include "viewmodel/loading_view.h"
 #include "viewmodel/main_view.h"
 #include "viewmodel/utxo_view.h"
+#include "viewmodel/utxo_view_status.h"
+#include "viewmodel/utxo_view_type.h"
 #include "viewmodel/dashboard_view.h"
 #include "viewmodel/address_book_view.h"
 #include "viewmodel/wallet_view.h"
@@ -33,15 +35,14 @@
 #include "viewmodel/settings_view.h"
 #include "viewmodel/messages_view.h"
 #include "viewmodel/statusbar_view.h"
+#include "viewmodel/theme.h"
 #include "model/app_model.h"
 
 #include "wallet/wallet_db.h"
-#include "utility/logger.h"
+#include "utility/log_rotation.h"
 #include "core/ecc_native.h"
 
-#include "translator.h"
-
-#include "utility/options.h"
+#include "utility/cli/options.h"
 
 #include <QtCore/QtPlugin>
 
@@ -81,7 +82,11 @@ using namespace beam;
 using namespace std;
 using namespace ECC;
 
+#ifdef APP_NAME
+static const char* AppName = APP_NAME;
+#else
 static const char* AppName = "Litecash Wallet";
+#endif
 
 int main (int argc, char* argv[])
 {
@@ -92,7 +97,7 @@ int main (int argc, char* argv[])
 
     QApplication app(argc, argv);
 
-	app.setWindowIcon(QIcon(":/assets/icon.png"));
+	app.setWindowIcon(QIcon(Theme::iconPath()));
 
     QApplication::setApplicationName(AppName);
 
@@ -148,17 +153,40 @@ int main (int argc, char* argv[])
             appDataDir = QString::fromStdString(vm[cli::APPDATA_PATH].as<string>());
         }
 
+        //TODO(sergey.zavarza) replace language choise with selectbox
+        QTranslator translator;
+        bool isTranslationLoaded = false;
+        if (vm.count(cli::LANG) && vm[cli::LANG].as<string>() == "ru")
+        {
+            isTranslationLoaded = translator.load("ru_RU", ":/translations");
+        }
+        else
+        {
+            isTranslationLoaded = translator.load("en_US", ":/translations");
+        }
+        if (isTranslationLoaded)
+        {
+            app.installTranslator(&translator);
+        }
+
         int logLevel = getLogLevel(cli::LOG_LEVEL, vm, LOG_LEVEL_DEBUG);
         int fileLogLevel = getLogLevel(cli::FILE_LOG_LEVEL, vm, LOG_LEVEL_DEBUG);
 
         beam::Crash::InstallHandler(appDataDir.filePath(AppName).toStdString().c_str());
 
-        auto logger = beam::Logger::create(logLevel, logLevel, fileLogLevel, "litecash_ui_",
-			appDataDir.filePath(WalletSettings::LogsFolder).toStdString());
+#define LOG_FILES_PREFIX "litecash_ui_"
+
+        const auto logFilesPath = appDataDir.filePath(WalletSettings::LogsFolder).toStdString();
+        auto logger = beam::Logger::create(logLevel, logLevel, fileLogLevel, LOG_FILES_PREFIX, logFilesPath);
+
+        unsigned logCleanupPeriod = vm[cli::LOG_CLEANUP_DAYS].as<uint32_t>() * 24 * 3600;
+
+        clean_old_logfiles(logFilesPath, LOG_FILES_PREFIX, logCleanupPeriod);
 
         try
         {
             Rules::get().UpdateChecksum();
+            LOG_INFO() << "Litecash Wallet UI " << PROJECT_VERSION; // << " (" << BRANCH_NAME << ")";
             LOG_INFO() << "Rules signature: " << Rules::get().Checksum;
 
             WalletSettings settings(appDataDir);
@@ -175,11 +203,20 @@ int main (int argc, char* argv[])
                 }
             }
 
+            qmlRegisterSingletonType<Theme>(
+                    "Beam.Wallet", 1, 0, "Theme",
+                    [](QQmlEngine* engine, QJSEngine* scriptEngine) -> QObject* {
+                        Q_UNUSED(engine)
+                        Q_UNUSED(scriptEngine)
+                        return new Theme;
+                    });
             qmlRegisterType<StartViewModel>("Beam.Wallet", 1, 0, "StartViewModel");
-            qmlRegisterType<RestoreViewModel>("Beam.Wallet", 1, 0, "RestoreViewModel");
+            qmlRegisterType<LoadingViewModel>("Beam.Wallet", 1, 0, "LoadingViewModel");
             qmlRegisterType<MainViewModel>("Beam.Wallet", 1, 0, "MainViewModel");
             qmlRegisterType<DashboardViewModel>("Beam.Wallet", 1, 0, "DashboardViewModel");
             qmlRegisterType<WalletViewModel>("Beam.Wallet", 1, 0, "WalletViewModel");
+            qmlRegisterType<UtxoViewStatus>("Beam.Wallet", 1, 0, "UtxoStatus");
+            qmlRegisterType<UtxoViewType>("Beam.Wallet", 1, 0, "UtxoType");
             qmlRegisterType<UtxoViewModel>("Beam.Wallet", 1, 0, "UtxoViewModel");
             qmlRegisterType<SettingsViewModel>("Beam.Wallet", 1, 0, "SettingsViewModel");
             qmlRegisterType<AddressBookViewModel>("Beam.Wallet", 1, 0, "AddressBookViewModel");
@@ -192,7 +229,7 @@ int main (int argc, char* argv[])
             qmlRegisterType<ContactItem>("Beam.Wallet", 1, 0, "ContactItem");
             qmlRegisterType<TxObject>("Beam.Wallet", 1, 0, "TxObject");
             qmlRegisterType<UtxoItem>("Beam.Wallet", 1, 0, "UtxoItem");
-            qmlRegisterType<DeviceItem>("Beam.Wallet", 1, 0, "DeviceItem");
+            qmlRegisterType<PaymentInfoItem>("Beam.Wallet", 1, 0, "PaymentInfoItem");
             qmlRegisterType<WalletDBPathItem>("Beam.Wallet", 1, 0, "WalletDBPathItem");
 
             engine.load(QUrl("qrc:/root.qml"));

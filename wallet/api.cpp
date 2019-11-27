@@ -50,11 +50,12 @@ namespace beam
         return std::string(data, data + (size > 1024 ? 1024 : size));
     }
 
-    WalletApi::WalletApi(IWalletApiHandler& handler)
+    WalletApi::WalletApi(IWalletApiHandler& handler, ACL acl)
         : _handler(handler)
+        , _acl(acl)
     {
-#define REG_FUNC(api, name) \
-        _methods[name] = BIND_THIS_MEMFN(on##api##Message);
+#define REG_FUNC(api, name, writeAccess) \
+        _methods[name] = {BIND_THIS_MEMFN(on##api##Message), writeAccess};
 
         WALLET_API_METHODS(REG_FUNC)
 
@@ -75,16 +76,71 @@ namespace beam
     void WalletApi::onCreateAddressMessage(int id, const nlohmann::json& params)
     {
         checkJsonParam(params, "lifetime", id);
-        checkJsonParam(params, "metadata", id);
 
         CreateAddress createAddress;
-        createAddress.metadata = params["metadata"];
         createAddress.lifetime = params["lifetime"];
 
         if (params["lifetime"] < 0)
             throwInvalidJsonRpc(id);
 
         _handler.onMessage(id, createAddress);
+    }
+
+    void WalletApi::onDeleteAddressMessage(int id, const nlohmann::json& params)
+    {
+        checkJsonParam(params, "address", id);
+
+        DeleteAddress deleteAddress;
+        deleteAddress.address.FromHex(params["address"]);
+
+        _handler.onMessage(id, deleteAddress);
+    }
+
+    void WalletApi::onEditAddressMessage(int id, const nlohmann::json& params)
+    {
+        checkJsonParam(params, "address", id);
+
+        if (!existsJsonParam(params, "comment") && !existsJsonParam(params, "expiration"))
+            throwInvalidJsonRpc(id);
+
+        EditAddress editAddress;
+        editAddress.address.FromHex(params["address"]);
+
+        if (existsJsonParam(params, "comment"))
+        {
+            std::string comment = params["comment"];
+
+            editAddress.comment = comment;
+        }
+
+        if (existsJsonParam(params, "expiration"))
+        {
+            std::string expiration = params["expiration"];
+
+            static std::map<std::string, EditAddress::Expiration> Items =
+            {
+                {"expired", EditAddress::Expired},
+                {"24h",  EditAddress::OneDay},
+                {"never", EditAddress::Never},
+            };
+
+            if(Items.count(expiration) == 0) throwInvalidJsonRpc(id);
+
+            editAddress.expiration = Items[expiration];
+        }
+
+        _handler.onMessage(id, editAddress);
+    }
+
+    void WalletApi::onAddrListMessage(int id, const nlohmann::json& params)
+    {
+        checkJsonParam(params, "own", id);
+
+        AddrList addrList;
+
+        addrList.own = params["own"];
+
+        _handler.onMessage(id, addrList);
     }
 
     void WalletApi::onValidateAddressMessage(int id, const nlohmann::json& params)
@@ -100,14 +156,52 @@ namespace beam
         _handler.onMessage(id, validateAddress);
     }
 
+    static CoinIDList readCoinsParameter(int id, const nlohmann::json& params)
+    {
+        CoinIDList coins;
+
+        if (!params["coins"].is_array() || params["coins"].size() <= 0)
+            throw jsonrpc_exception{ INVALID_PARAMS_JSON_RPC , "Invalid 'coins' parameter.", id };
+
+        for (const auto& cid : params["coins"])
+        {
+            bool done = false;
+
+            if (cid.is_string())
+            {
+                auto coinId = Coin::FromString(cid);
+
+                if (coinId)
+                {
+                    coins.push_back(*coinId);
+                    done = true;
+                }
+            }
+
+            if (!done)
+                throw jsonrpc_exception{ INVALID_PARAMS_JSON_RPC , "Invalid 'coin ID' parameter.", id };
+        }
+
+        return coins;
+    }
+
+    static uint64_t readSessionParameter(int id, const nlohmann::json& params)
+    {
+        uint64_t session = 0;
+
+        if (params["session"] > 0)
+        {
+            session = params["session"];
+        }
+        else throw jsonrpc_exception{ INVALID_JSON_RPC , "Invalid 'session' parameter.", id };
+
+        return session;
+    }
+
     void WalletApi::onSendMessage(int id, const nlohmann::json& params)
     {
-        //checkJsonParam(params, "session", id);
         checkJsonParam(params, "value", id);
         checkJsonParam(params, "address", id);
-
-        //if (params["session"] < 0)
-        //    throwInvalidJsonRpc(id);
 
         if (params["value"] <= 0)
             throwInvalidJsonRpc(id);
@@ -116,9 +210,34 @@ namespace beam
             throwInvalidJsonRpc(id);
 
         Send send;
-        //send.session = params["session"];
         send.value = params["value"];
-        send.address.FromHex(params["address"]);
+
+        if (existsJsonParam(params, "coins"))
+        {
+            send.coins = readCoinsParameter(id, params);
+        }
+        else if (existsJsonParam(params, "session"))
+        {
+            send.session = readSessionParameter(id, params);
+        }
+
+        if (!send.address.FromHex(params["address"]))
+        {
+            throw jsonrpc_exception{ INVALID_PARAMS_JSON_RPC , "Invalid receiver address.", id };
+        }
+
+        if (existsJsonParam(params, "from"))
+        {
+            WalletID from(Zero);
+            if (from.FromHex(params["from"]))
+            {
+                send.from = from;
+            }
+            else
+            {
+                throw jsonrpc_exception{ INVALID_PARAMS_JSON_RPC , "Invalid sender address.", id };
+            }
+        }
 
         if (existsJsonParam(params, "fee"))
         {
@@ -135,12 +254,6 @@ namespace beam
         }
 
         _handler.onMessage(id, send);
-    }
-
-    void WalletApi::onReplaceMessage(int id, const nlohmann::json& params)
-    {
-        Replace replace;
-        _handler.onMessage(id, replace);
     }
 
     void WalletApi::onStatusMessage(int id, const nlohmann::json& params)
@@ -161,17 +274,12 @@ namespace beam
 
     void WalletApi::onSplitMessage(int id, const nlohmann::json& params)
     {
-        //checkJsonParam(params, "session", id);
         checkJsonParam(params, "coins", id);
-
-        //if (params["session"] < 0)
-        //    throwInvalidJsonRpc(id);
 
         if (!params["coins"].is_array() || params["coins"].size() <= 0)
             throwInvalidJsonRpc(id);
 
         Split split;
-        //split.session = params["session"];
 
         for (const auto& amount : params["coins"])
         {
@@ -205,21 +313,67 @@ namespace beam
         _handler.onMessage(id, txCancel);
     }
 
+    void WalletApi::onTxDeleteMessage(int id, const nlohmann::json& params)
+    {
+        checkJsonParam(params, "txId", id);
+        auto txId = from_hex(params["txId"]);
+
+        TxDelete txDelete;
+
+        if (txId.size() != txDelete.txId.size())
+            throwInvalidJsonRpc(id);
+
+        std::copy_n(txId.begin(), txDelete.txId.size(), txDelete.txId.begin());
+
+        _handler.onMessage(id, txDelete);
+    }
+
     void WalletApi::onGetUtxoMessage(int id, const nlohmann::json& params)
     {
         GetUtxo getUtxo;
+
+        if (existsJsonParam(params, "count"))
+        {
+            if (params["count"] > 0)
+            {
+                getUtxo.count = params["count"];
+            }
+            else throw jsonrpc_exception{ INVALID_JSON_RPC , "Invalid 'count' parameter.", id };
+        }
+
+        if (existsJsonParam(params, "skip"))
+        {
+            if (params["skip"] >= 0)
+            {
+                getUtxo.skip = params["skip"];
+            }
+            else throw jsonrpc_exception{ INVALID_JSON_RPC , "Invalid 'skip' parameter.", id };
+        }
+
         _handler.onMessage(id, getUtxo);
     }
 
     void WalletApi::onLockMessage(int id, const nlohmann::json& params)
     {
+        checkJsonParam(params, "coins", id);
+        checkJsonParam(params, "session", id);
+
         Lock lock;
+
+        lock.session = readSessionParameter(id, params);
+        lock.coins = readCoinsParameter(id, params);
+
         _handler.onMessage(id, lock);
     }
 
     void WalletApi::onUnlockMessage(int id, const nlohmann::json& params)
     {
+        checkJsonParam(params, "session", id);
+
         Unlock unlock;
+
+        unlock.session = readSessionParameter(id, params);
+
         _handler.onMessage(id, unlock);
     }
 
@@ -242,6 +396,24 @@ namespace beam
             }
         }
 
+        if (existsJsonParam(params, "count"))
+        {
+            if (params["count"] > 0)
+            {
+                txList.count = params["count"];
+            }
+            else throw jsonrpc_exception{ INVALID_JSON_RPC , "Invalid 'count' parameter.", id };
+        }
+
+        if (existsJsonParam(params, "skip"))
+        {
+            if (params["skip"] >= 0)
+            {
+                txList.skip = params["skip"];
+            }
+            else throw jsonrpc_exception{ INVALID_JSON_RPC , "Invalid 'skip' parameter.", id };
+        }
+
         _handler.onMessage(id, txList);
     }
 
@@ -259,6 +431,50 @@ namespace beam
             {"id", id},
             {"result", std::to_string(res.address)}
         };
+    }
+
+    void WalletApi::getResponse(int id, const DeleteAddress::Response& res, json& msg)
+    {
+        msg = json
+        {
+            {"jsonrpc", "2.0"},
+            {"id", id},
+            {"result", "done"}
+        };
+    }
+
+    void WalletApi::getResponse(int id, const EditAddress::Response& res, json& msg)
+    {
+        msg = json
+        {
+            {"jsonrpc", "2.0"},
+            {"id", id},
+            {"result", "done"}
+        };
+    }
+
+    void WalletApi::getResponse(int id, const AddrList::Response& res, json& msg)
+    {
+        msg = json
+        {
+            {"jsonrpc", "2.0"},
+            {"id", id},
+            {"result", json::array()}
+        };
+
+        for (auto& addr : res.list)
+        {
+            msg["result"].push_back(
+            {
+                {"address", std::to_string(addr.m_walletID)},
+                {"comment", addr.m_label},
+                {"category", addr.m_category},
+                {"create_time", addr.getCreateTime()},
+                {"duration", addr.m_duration},
+                {"expired", addr.isExpired()},
+                {"own", addr.m_OwnID != 0}
+            });
+        }
     }
 
     void WalletApi::getResponse(int id, const ValidateAddress::Response& res, json& msg)
@@ -292,14 +508,15 @@ namespace beam
 
             msg["result"].push_back(
             { 
-                {"id", utxo.m_ID.m_Idx},
+                {"id", utxo.toStringID()},
                 {"amount", utxo.m_ID.m_Value},
                 {"type", (const char*)FourCC::Text(utxo.m_ID.m_Type)},
-                {"height", utxo.m_createHeight},
-                {"maturity", utxo.m_maturity},
+                {"maturity", utxo.get_Maturity()},
                 {"createTxId", createTxId},
                 {"spentTxId", spentTxId},
-                //{"sessionId", utxo.m_sessionId},
+                {"status", utxo.m_status},
+                {"status_string", utxo.getStatusString()},
+                {"session", utxo.m_sessionId}
             });
         }
     }
@@ -324,12 +541,14 @@ namespace beam
         {
             {"txId", txIDToString(tx.m_txId)},
             {"status", tx.m_status},
+            {"status_string", tx.getStatusString()},
             {"sender", std::to_string(tx.m_sender ? tx.m_myId : tx.m_peerId)},
             {"receiver", std::to_string(tx.m_sender ? tx.m_peerId : tx.m_myId)},
             {"fee", tx.m_fee},
             {"value", tx.m_amount},
             {"comment", std::string{ tx.m_message.begin(), tx.m_message.end() }},
-            {"kernel", to_hex(tx.m_kernelID.m_pData, tx.m_kernelID.nBytes)},
+            {"create_time", tx.m_createTime},            
+            {"income", !tx.m_sender}
         };
 
         if (kernelProofHeight > 0)
@@ -340,6 +559,15 @@ namespace beam
             {
                 msg["confirmations"] = systemHeight - kernelProofHeight;
             }
+        }
+
+        if (tx.m_status == TxStatus::Failed)
+        {
+            msg["failure_reason"] = wallet::GetFailureMessage(tx.m_failureReason);
+        }
+        else if (tx.m_status != TxStatus::Cancelled)
+        {
+            msg["kernel"] = to_hex(tx.m_kernelID.m_pData, tx.m_kernelID.nBytes);
         }
     }
 
@@ -370,6 +598,16 @@ namespace beam
     }
 
     void WalletApi::getResponse(int id, const TxCancel::Response& res, json& msg)
+    {
+        msg = json
+        {
+            {"jsonrpc", "2.0"},
+            {"id", id},
+            {"result", res.result}
+        };
+    }
+
+    void WalletApi::getResponse(int id, const TxDelete::Response& res, json& msg)
     {
         msg = json
         {
@@ -411,15 +649,50 @@ namespace beam
                     {"receiving", res.receiving},
                     {"sending", res.sending},
                     {"maturing", res.maturing},
-                    {"locked", res.locked},
+                    {"difficulty", res.difficulty},
                 }
             }
         };
     }
 
+    void WalletApi::getResponse(int id, const Lock::Response& res, json& msg)
+    {
+        msg = json
+        {
+            {"jsonrpc", "2.0"},
+            {"id", id},
+            {"result", res.result}
+        };        
+    }
+
+    void WalletApi::getResponse(int id, const Unlock::Response& res, json& msg)
+    {
+        msg = json
+        {
+            {"jsonrpc", "2.0"},
+            {"id", id},
+            {"result", res.result}
+        };
+    }
+
     bool WalletApi::parse(const char* data, size_t size)
     {
-        if (size == 0) return false;
+        if (size == 0)
+        {
+            json msg
+            {
+                {"jsonrpc", "2.0"},
+                {"error",
+                    {
+                        {"code", INVALID_JSON_RPC},
+                        {"message", "Empty JSON request."},
+                    }
+                }
+            };
+
+            _handler.onInvalidJsonRpc(msg);
+            return false;
+        }
 
         try
         {
@@ -427,12 +700,26 @@ namespace beam
 
             if (msg["jsonrpc"] != "2.0") throwInvalidJsonRpc();
             if (msg["id"] <= 0) throwInvalidJsonRpc();
+
+            if (_acl)
+            {
+                if (msg["key"] == nullptr) throw jsonrpc_exception{ INVALID_PARAMS_JSON_RPC , "API key not specified.", msg["id"] };
+                if (_acl->count(msg["key"]) == 0) throw jsonrpc_exception{ UNKNOWN_API_KEY , "Unknown API key.", msg["id"] };
+            }
+
             if (msg["method"] == nullptr) throwInvalidJsonRpc();
             if (_methods.find(msg["method"]) == _methods.end()) throwUnknownJsonRpc(msg["id"]);
 
             try
             {
-                _methods[msg["method"]](msg["id"], msg["params"] == nullptr ? json::object() : msg["params"]);
+                auto& info = _methods[msg["method"]];
+
+                if(_acl && info.writeAccess && _acl.get()[msg["key"]] == false)
+                {
+                    throw jsonrpc_exception{ INVALID_PARAMS_JSON_RPC , "User doesn't have permissions to call this method.", msg["id"] };
+                }
+
+                info.func(msg["id"], msg["params"] == nullptr ? json::object() : msg["params"]);
             }
             catch (const nlohmann::detail::exception& e)
             {

@@ -3,12 +3,12 @@
  <mime-type type="application/x-beam-item">
     <sub-class-of type="text/xml"/>
     <sub-class-of type="application/xml"/>
-    <comment>Beam - scalable confidential cryptocurrency.</comment>
-    <icon>beam</icon>
+    <comment>Litecash - The Speed Of Lite.</comment>
+    <icon>litecash</icon>
     <glob pattern=".dmx" weight="50" />
     <magic priority="90">
           <match type="string" offset="2" value="!DOCTYPE DBM"/>
     </magic>
-    <root-XML localName="beam" />
+    <root-XML localName="litecash" />
   </mime-type>
  </mime-info>

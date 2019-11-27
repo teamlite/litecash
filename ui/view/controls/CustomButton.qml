@@ -9,8 +9,8 @@ import "."
 Button {
     id: control
     
-    palette.button: Style.separator_color
-    palette.buttonText: Style.white
+    palette.button: Style.separator
+    palette.buttonText: Style.content_main
     property alias textOpacity: rect.opacity
     property alias shadowSamples: drop_shadow.samples
     property alias shadowRadius: drop_shadow.radius
@@ -42,7 +42,7 @@ Button {
         text: control.text
         font: control.font
         
-        color: control.enabled ? control.palette.buttonText : Style.disable_text_color
+        color: control.enabled ? control.palette.buttonText : Style.content_disabled
     }
     
     Keys.onPressed: {
@@ -52,7 +52,8 @@ Button {
     background: Rectangle {
         id: rect
         radius: 50
-        color: control.enabled ? control.palette.button : "slategrey"
+        color: control.enabled ? control.palette.button : Style.content_disabled
+        opacity: control.enabled ? 1.0 : 0.6
         
         width: control.width
         height: control.height
@@ -63,10 +64,8 @@ Button {
         anchors.fill: rect
         radius: 7
         samples: 9
-        color: "white"
+        color: Style.content_main
         source: rect
-        // TODO (roman.strilets) maybe should using control.focus property
-        // look at https://doc.qt.io/qt-5.9/qml-qtquick-controls2-control.html#visualFocus-prop
-        visible: /*control.visualFocus*/control.activeFocus || control.hovered
+        visible: control.visualFocus || control.hovered
     }
 }

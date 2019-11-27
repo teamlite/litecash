@@ -1,9 +1,10 @@
 set(NODE_SRC
     node.cpp
-    node_compressor.cpp
     db.cpp
     processor.cpp
     txpool.cpp
+    node_client.h
+    node_client.cpp
 )
 
 if(ANDROID)

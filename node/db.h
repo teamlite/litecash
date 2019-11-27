@@ -20,6 +20,14 @@
 
 namespace beam {
 
+class NodeDBUpgradeException : public std::runtime_error
+{
+public:
+    NodeDBUpgradeException(const char* message)
+        : std::runtime_error(message)
+    {}
+};
+
 class NodeDB
 {
 public:
@@ -35,12 +43,16 @@ public:
 			DbVer,
 			CursorRow,
 			CursorHeight,
-			FossilHeight,
+			FossilHeight, // Height starting from which and below original blocks are erased
 			CfgChecksum,
 			MyID,
-			SyncTarget,
-			LoHorizon,
-			Treasury
+			SyncTarget, // deprecated
+			LoHorizon, // Height of no-return. Navigation is impossible below it
+			Treasury,
+			DummyID, // hash of keys used to create UTXOs (owner key, dummy key)
+			HeightTxoLo, // Height starting from which and below Txo info is totally erased.
+			HeightTxoHi, // Height starting from which and below Txo infi is compacted, only the commitment is left
+			SyncData,
 		};
 	};
 
@@ -77,6 +89,11 @@ public:
 			StateGetNextCount,
 			StateSetPeer,
 			StateGetPeer,
+			StateSetExtra,
+			StateGetExtra,
+			StateSetTxos,
+			StateGetTxos,
+			StateFindByTxos,
 			TipAdd,
 			TipDel,
 			TipReachableAdd,
@@ -94,15 +111,11 @@ public:
 			HashForHist,
 			StateGetBlock,
 			StateSetBlock,
-			//StateDelBlock,
-			StateSetRollback,
+			StateDelBlock,
 			EventIns,
 			EventDel,
 			EventEnum,
 			EventFind,
-			MacroblockEnum,
-			MacroblockIns,
-			MacroblockDel,
 			PeerAdd,
 			PeerDel,
 			PeerEnum,
@@ -117,13 +130,23 @@ public:
 			BbsMaxTime,
 			DummyIns,
 			DummyFindLowest,
-			DummyFindLastID,
+			DummyFind,
 			DummyUpdHeight,
 			DummyDel,
 			KernelIns,
 			KernelFind,
 			KernelDel,
 			KernelDelAll,
+			TxoAdd,
+			TxoDelFrom,
+			TxoSetSpent,
+			TxoDelSpentFrom,
+			TxoEnum,
+			TxoEnumBySpent,
+			TxoDelSpentTxosFrom,
+			TxoSetValue,
+            BlockFind,
+			FindHeightBelow,
 
 			Dbg0,
 			Dbg1,
@@ -141,6 +164,9 @@ public:
 
 	void Close();
 	void Open(const char* szPath);
+
+	void Vacuum();
+	void CheckIntegrity();
 
 	virtual void OnModified() {}
 
@@ -167,10 +193,12 @@ public:
 		void put(int col, uint64_t);
 		void put(int col, const Blob&);
 		void put(int col, const char*);
+		void put(int col, const Key::ID&, Key::ID::Packed&);
 		void get(int col, uint32_t&);
 		void get(int col, uint64_t&);
 		void get(int col, Blob&);
 		void get(int col, ByteBuffer&); // don't over-use
+		void get(int col, Key::ID&);
 
 		const void* get_BlobStrict(int col, uint32_t n);
 
@@ -229,10 +257,15 @@ public:
 	void set_Peer(uint64_t rowid, const PeerID*);
 	bool get_Peer(uint64_t rowid, PeerID&);
 
+	void set_StateExtra(uint64_t rowid, const ECC::Scalar*);
+	bool get_StateExtra(uint64_t rowid, ECC::Scalar&);
+
+	void set_StateTxos(uint64_t rowid, const TxoID*);
+	TxoID get_StateTxos(uint64_t rowid);
+
 	void SetStateBlock(uint64_t rowid, const Blob& bodyP, const Blob& bodyE);
-	void GetStateBlock(uint64_t rowid, ByteBuffer* pP, ByteBuffer* pE, ByteBuffer* pRollback);
-	void SetStateRollback(uint64_t rowid, const Blob& rollback);
-	//void DelStateBlockPRB(uint64_t rowid); // perishable and rollback, but no ethernal
+	void GetStateBlock(uint64_t rowid, ByteBuffer* pP, ByteBuffer* pE);
+	void DelStateBlockPP(uint64_t rowid); // delete perishable, peer. Keep ethernal
 	void DelStateBlockAll(uint64_t rowid);
 
 	struct StateID {
@@ -242,6 +275,8 @@ public:
 	};
 
 	void get_StateID(const StateID&, Block::SystemState::ID&);
+
+	TxoID FindStateByTxoID(StateID&, TxoID); // returns the Txos at state end
 
 	struct WalkerState {
 		Recordset m_Rs;
@@ -254,6 +289,7 @@ public:
 	void EnumTips(WalkerState&); // height lowest to highest
 	void EnumFunctionalTips(WalkerState&); // chainwork highest to lowest
 
+	Height get_HeightBelow(Height);
 	void EnumStatesAt(WalkerState&, Height);
 	void EnumAncestors(WalkerState&, const StateID&);
 	bool get_Prev(StateID&);
@@ -272,12 +308,8 @@ public:
 
 	void assert_valid(); // diagnostic, for tests only
 
-	void EnumMacroblocks(WalkerState&); // highest to lowest
-	void MacroblockIns(uint64_t rowid);
-	void MacroblockDel(uint64_t rowid);
-
 	void InsertEvent(Height, const Blob&, const Blob& key);
-	void DeleteEventsAbove(Height);
+	void DeleteEventsFrom(Height);
 
 	struct WalkerEvent {
 		Recordset m_Rs;
@@ -361,19 +393,41 @@ public:
 	bool EnumBbs(IBbsHistogram&);
 
 
-	void InsertDummy(Height h, uint64_t);
-	uint64_t GetLowestDummy(Height& h);
-	uint64_t GetDummyLastID();
-	void DeleteDummy(uint64_t);
-	void SetDummyHeight(uint64_t, Height);
+	void InsertDummy(Height h, const Key::ID&);
+	Height GetLowestDummy(Key::ID&);
+	void DeleteDummy(const Key::ID& kid);
+	void SetDummyHeight(const Key::ID&, Height);
+	Height GetDummyHeight(const Key::ID&);
 
 	void InsertKernel(const Blob&, Height h);
 	void DeleteKernel(const Blob&, Height h);
 	Height FindKernel(const Blob&); // in case of duplicates - returning the one with the largest Height
+    Height FindBlock(const Blob&);
 
 	uint64_t FindStateWorkGreater(const Difficulty::Raw&);
 
-	// reset cursor to zero. Keep all the data: local macroblocks, peers, bbs, dummy UTXOs
+	void TxoAdd(TxoID, const Blob&);
+	void TxoDelFrom(TxoID);
+	void TxoSetSpent(TxoID, Height);
+	void TxoDelSpentFrom(Height);
+
+	struct WalkerTxo
+	{
+		Recordset m_Rs;
+		TxoID m_ID;
+		Blob m_Value;
+		Height m_SpendHeight;
+
+		WalkerTxo(NodeDB& db) :m_Rs(db) {}
+		bool MoveNext();
+	};
+
+	void EnumTxos(WalkerTxo&, TxoID id0);
+	void EnumTxosBySpent(WalkerTxo&, const HeightRange&);
+	uint64_t DeleteSpentTxos(const HeightRange&, TxoID id0); // delete Txos where (SpendHeight is within range) AND (TxoID >= id0)
+	void TxoSetValue(TxoID, const Blob&);
+
+	// reset cursor to zero. Keep all the data: local peers, bbs, dummy UTXOs
 	void ResetCursor();
 
 private:
@@ -399,6 +453,8 @@ private:
 	static void ThrowInconsistent();
 
 	void Create();
+	void CreateTableDummy();
+	void CreateTableTxos();
 	void ExecQuick(const char*);
 	std::string ExecTextOut(const char*);
 	bool ExecStep(sqlite3_stmt*);

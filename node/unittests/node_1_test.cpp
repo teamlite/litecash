@@ -260,7 +260,7 @@ int main()
 #endif
     auto logger = beam::Logger::create(logLevel, logLevel);
 
-	beam::helpers::ProcessWideLock("/tmp/LITECASH_node_test_lock");
+	beam::helpers::ProcessWideLock("/tmp/BEAM_node_test_lock");
 
     beam::TestP2pSane();
     beam::TestNode1(10, 100);
