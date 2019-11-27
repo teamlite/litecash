@@ -75,12 +75,12 @@ namespace beam
 
     void WalletApi::onCreateAddressMessage(int id, const nlohmann::json& params)
     {
-        checkJsonParam(params, "lifetime", id);
+        checkJsonParam(params, "expiration", id);
 
         CreateAddress createAddress;
-        createAddress.lifetime = params["lifetime"];
+        createAddress.lifetime = params["expiration"];
 
-        if (params["lifetime"] < 0)
+        if (params["expiration"] < 0)
             throwInvalidJsonRpc(id);
 
         _handler.onMessage(id, createAddress);
