@@ -78,7 +78,21 @@ namespace beam
         checkJsonParam(params, "expiration", id);
 
         CreateAddress createAddress;
-        createAddress.lifetime = params["expiration"];
+
+        if (existsJsonParam(params, "expiration"))
+        {
+            std::string expiration = params["expiration"];
+
+            static std::map<std::string, EditAddress::Expiration> Items =
+            {
+                {"24h",  EditAddress::OneDay},
+                {"never", EditAddress::Never},
+            };
+
+            if(Items.count(expiration) == 0) throwInvalidJsonRpc(id);
+
+            createAddress.lifetime = Items[expiration];
+        }
 
         if (params["expiration"] < 0)
             throwInvalidJsonRpc(id);
