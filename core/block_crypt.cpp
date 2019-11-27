@@ -100,9 +100,14 @@ namespace beam
 
 	/////////////
 	// Input
+	thread_local bool TxElement::s_IgnoreMaturity = false;
+
 	int TxElement::cmp(const TxElement& v) const
 	{
-		CMP_MEMBER(m_Maturity)
+		if (!s_IgnoreMaturity)
+		{
+			CMP_MEMBER(m_Maturity)
+		}
 		CMP_MEMBER_EX(m_Commitment)
 		return 0;
 	}
@@ -154,7 +159,15 @@ namespace beam
 
 	void SwitchCommitment::CreateInternal(ECC::Scalar::Native& sk, ECC::Point::Native& comm, bool bComm, Key::IKdf& kdf, const Key::IDV& kidv) const
 	{
-		kdf.DeriveKey(sk, kidv);
+		uint32_t iScheme = kidv.m_SubIdx >> 24;
+		if (2 == iScheme)
+		{
+			Key::IDV kidv2 = kidv;
+			kidv2.m_SubIdx &= ((1U << 24) - 1);
+			kdf.DeriveKey(sk, kidv2);
+		}
+		else
+			kdf.DeriveKey(sk, kidv);
 
 		comm = ECC::Context::get().G * sk;
 		AddValue(comm, kidv.m_Value);
@@ -560,7 +573,7 @@ namespace beam
 
 	int TxBase::CmpInOut(const Input& in, const Output& out)
 	{
-		if (in.m_Maturity)
+		if (in.m_Maturity && !TxElement::s_IgnoreMaturity)
 			return Cast::Down<TxElement>(in).cmp(out);
 
 		// if maturity isn't overridden (as in standard txs/blocks) - we consider the commitment and the coinbase flag.
@@ -799,6 +812,8 @@ namespace beam
 
 		void AddTo(ECC::Point::Native& res, const Type& x)
 		{
+			ECC::Mode::Scope scope(ECC::Mode::Fast);
+
 			if (get_Hi(x))
 			{
 				ECC::Scalar s;
@@ -1170,13 +1185,15 @@ namespace beam
 		if ((hr.m_Min < Rules::HeightGenesis) || hr.IsEmpty())
 			return false;
 
-		TxBase::Context ctx;
+		TxBase::Context::Params pars;
+		pars.m_bBlockMode = true;
+
+		TxBase::Context ctx(pars);
 		ctx.m_Height = hr;
-		ctx.m_bBlockMode = true;
 
 		return
 			ctx.ValidateAndSummarize(*this, std::move(r)) &&
-			ctx.IsValidBlock(*this);
+			ctx.IsValidBlock();
 	}
 
 	/////////////

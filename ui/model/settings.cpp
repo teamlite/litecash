@@ -28,19 +28,15 @@ using namespace std;
 namespace
 {
     const char* NodeAddressName = "node/address";
-    const char* LockTimeoutName = "general/lock_timeout";
+    const char* LockTimeoutName = "lock_timeout";
+    const char* RequirePasswordToSpendMoney = "require_password_to_spend_money";
 
     const char* LocalNodeRun = "localnode/run";
     const char* LocalNodePort = "localnode/port";
-    const char* LocalNodeMiningThreads = "localnode/mining_threads";
     const char* LocalNodePeers = "localnode/peers";
-#ifdef LITECASH_USE_GPU
-    const char* LocalNodeUseGpu = "localnode/use_gpu";
-    const char* LocalNodeMiningDevices = "localnode/mining_devices";
-#endif
 }
 
-const char* WalletSettings::WalletCfg = "cash-wallet.cfg";
+const char* WalletSettings::WalletCfg = "beam-wallet.cfg";
 const char* WalletSettings::LogsFolder = "logs";
 const char* WalletSettings::SettingsFile = "settings.ini";
 const char* WalletSettings::WalletDBFile = "wallet.db";
@@ -114,6 +110,18 @@ void WalletSettings::setLockTimeout(int value)
     }
 }
 
+bool WalletSettings::isPasswordReqiredToSpendMoney() const
+{
+    Lock lock(m_mutex);
+    return m_data.value(RequirePasswordToSpendMoney, false).toBool();
+}
+
+void WalletSettings::setPasswordReqiredToSpendMoney(bool value)
+{
+    Lock lock(m_mutex);
+    m_data.setValue(RequirePasswordToSpendMoney, value);
+}
+
 bool WalletSettings::getRunLocalNode() const
 {
     Lock lock(m_mutex);
@@ -132,7 +140,11 @@ void WalletSettings::setRunLocalNode(bool value)
 uint WalletSettings::getLocalNodePort() const
 {
     Lock lock(m_mutex);
+#ifdef LITECASH_TESTNET
+    return m_data.value(LocalNodePort, 11005).toUInt();
+#else
     return m_data.value(LocalNodePort, 10005).toUInt();
+#endif // LITECASH_TESTNET
 }
 
 void WalletSettings::setLocalNodePort(uint port)
@@ -142,21 +154,6 @@ void WalletSettings::setLocalNodePort(uint port)
         m_data.setValue(LocalNodePort, port);
     }
     emit localNodePortChanged();
-}
-
-uint WalletSettings::getLocalNodeMiningThreads() const
-{
-    Lock lock(m_mutex);
-    return m_data.value(LocalNodeMiningThreads, 1).toUInt();
-}
-
-void WalletSettings::setLocalNodeMiningThreads(uint n)
-{
-    {
-        Lock lock(m_mutex);
-        m_data.setValue(LocalNodeMiningThreads, n);
-    }
-    emit localNodeMiningThreadsChanged();
 }
 
 string WalletSettings::getLocalNodeStorage() const
@@ -170,64 +167,6 @@ string WalletSettings::getTempDir() const
     Lock lock(m_mutex);
     return m_appDataDir.filePath("./temp").toStdString();
 }
-
-#ifdef LITECASH_USE_GPU
-bool WalletSettings::getUseGpu() const
-{
-    Lock lock(m_mutex);
-    return m_data.value(LocalNodeUseGpu, false).toBool();
-}
-
-void WalletSettings::setUseGpu(bool value)
-{
-    if (getUseGpu() != value)
-    {
-        {
-            Lock lock(m_mutex);
-            m_data.setValue(LocalNodeUseGpu, value);
-        }
-        emit localNodeUseGpuChanged();
-    }
-}
-
-vector<int32_t> WalletSettings::getMiningDevices() const
-{
-    Lock lock(m_mutex);
-    auto t = m_data.value(LocalNodeMiningDevices).value<QStringList>();
-    vector<int32_t> v;
-    for (const auto& i : t)
-    {
-        v.push_back(i.toInt());
-    }
-
-    return v;
-}
-
-void WalletSettings::setMiningDevices(const vector<int32_t>& value)
-{
-    if (getMiningDevices() != value)
-    {
-        {
-            Lock lock(m_mutex);
-            QStringList t;
-            for (auto i : value)
-            {
-                t.push_back(QString::asprintf("%d", i));
-            }
-            if (t.empty())
-            {
-                m_data.remove(LocalNodeMiningDevices);
-            }
-            else
-            {
-                m_data.setValue(LocalNodeMiningDevices, QVariant::fromValue(t));
-            }
-        }
-        emit localNodeMiningDevicesChanged();
-    }
-}
-
-#endif
 
 static void zipLocalFile(QuaZip& zip, const QString& path, const QString& folder = QString())
 {

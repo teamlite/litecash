@@ -19,10 +19,6 @@
 #include "utility/io/timer.h"
 #include "utility/helpers.h"
 
-#ifdef LITECASH_USE_GPU
-#include "utility/gpu/gpu_tools.h"
-#endif
-
 #include <boost/program_options.hpp>
 
 #define LOG_VERBOSE_ENABLED 0
@@ -47,9 +43,10 @@ class StratumClient : public stratum::ParserCallback {
     Block::PoW _lastFoundBlock;
     bool _blockSent;
     bool _tls;
+    bool _fakeSolver;
 
 public:
-    StratumClient(io::Reactor& reactor, const io::Address& serverAddress, std::string apiKey, bool no_tls) :
+    StratumClient(io::Reactor& reactor, const io::Address& serverAddress, std::string apiKey, bool no_tls, bool fake) :
         _reactor(reactor),
         _serverAddress(serverAddress),
         _apiKey(std::move(apiKey)),
@@ -59,15 +56,16 @@ public:
         ),
         _timer(io::Timer::create(_reactor)),
         _blockSent(false),
-        _tls(!no_tls)
+        _tls(!no_tls),
+        _fakeSolver(fake)
     {
         _timer->start(0, false, BIND_THIS_MEMFN(on_reconnect));
-        _miner = IExternalPOW::create_local_solver();
+        _miner = IExternalPOW::create_local_solver(fake);
     }
 
 private:
     bool on_raw_message(void* data, size_t size) {
-        LOG_VERBOSE() << "got " << std::string((char*)data, size-1);
+        LOG_DEBUG() << "got " << std::string((char*)data, size-1);
         return stratum::parse_json_msg(data, size, *this);
     }
 
@@ -89,7 +87,7 @@ private:
         if (!fill_job_info(job)) return false;
 
         _miner->new_job(
-            _lastJobID, _lastJobInput, pow,
+            _lastJobID, _lastJobInput, pow, job.height,
             BIND_THIS_MEMFN(on_block_found),
             []() { return false; }
         );
@@ -105,25 +103,26 @@ private:
         return true;
     }
 
-    void on_block_found() {
+    IExternalPOW::BlockFoundResult on_block_found() {
         std::string jobID;
         _miner->get_last_found_block(jobID, _lastFoundBlock);
         if (jobID != _lastJobID) {
             LOG_INFO() << "solution expired" << TRACE(jobID);
-            return;
+            return IExternalPOW::solution_expired;
         }
 
         //char buf[72];
         //LOG_DEBUG() << "input=" << to_hex(buf, _lastJobInput.m_pData, 32);
 
-        if (!_lastFoundBlock.IsValid(_lastJobInput.m_pData, 32)) {
+        if (!_fakeSolver && !_lastFoundBlock.IsValid(_lastJobInput.m_pData, 32)) {
             LOG_ERROR() << "solution is invalid, id=" << _lastJobID;
-            return;
+            return IExternalPOW::solution_rejected;
         }
         LOG_INFO() << "block found id=" << _lastJobID;
 
         _blockSent = false;
         send_last_found_block();
+        return IExternalPOW::solution_accepted;
     }
 
     void send_last_found_block() {
@@ -223,6 +222,7 @@ struct Options {
     std::string apiKey;
     std::string serverAddress;
     bool no_tls=false;
+    bool fake=false;
     int logLevel=LOG_LEVEL_DEBUG;
     unsigned logRotationPeriod = 3*60*60*1000; // 3 hours
 };
@@ -242,13 +242,6 @@ int main(int argc, char* argv[]) {
     auto logger = Logger::create(LOG_LEVEL_INFO, options.logLevel, options.logLevel, logFilePrefix, "logs");
     int retCode = 0;
     try {
-#ifdef LITECASH_USE_GPU
-        if (!HasSupportedCard()) {
-            LOG_ERROR() << "Your GPU device is not supported at the moment. You may use miner client for CPU";
-            return 1;
-        }
-#endif
-
         io::Reactor::Ptr reactor = io::Reactor::create();
         io::Address connectTo;
         if (!connectTo.resolve(options.serverAddress.c_str())) {
@@ -260,7 +253,7 @@ int main(int argc, char* argv[]) {
         logRotateTimer->start(
             options.logRotationPeriod, true, []() { Logger::get()->rotate(); }
         );
-        StratumClient client(*reactor, connectTo, options.apiKey, options.no_tls);
+        StratumClient client(*reactor, connectTo, options.apiKey, options.no_tls, options.fake);
         reactor->run();
         LOG_INFO() << "stopping...";
     } catch (const std::exception& e) {
@@ -281,6 +274,7 @@ bool parse_cmdline(int argc, char* argv[], Options& o) {
     ("server", po::value<std::string>(&o.serverAddress)->required(), "server address")
     ("key", po::value<std::string>(&o.apiKey)->required(), "api key")
     ("no-tls", po::bool_switch(&o.no_tls)->default_value(false), "disable tls")
+    ("fake", po::bool_switch(&o.fake)->default_value(false), "fake POW just to test protocol")
     ;
 
 #ifdef NDEBUG
@@ -298,6 +292,7 @@ bool parse_cmdline(int argc, char* argv[], Options& o) {
     {
         po::store(po::command_line_parser(argc, argv) // value stored first is preferred
                   .options(cliOptions)
+                  .style(po::command_line_style::default_style ^ po::command_line_style::allow_guessing)
                   .run(), vm);
 
         if (vm.count("help")) {

@@ -32,7 +32,7 @@ AppModel* AppModel::getInstance()
 
 AppModel::AppModel(WalletSettings& settings)
     : m_settings{settings}
-    , m_restoreWallet{false}
+    , m_walletReactor(beam::io::Reactor::create())
 {
     assert(s_instance == nullptr);
     s_instance = this;
@@ -56,34 +56,34 @@ bool AppModel::createWallet(const SecString& seed, const SecString& pass)
         boost::filesystem::path newName = dbFilePath + "_" + to_string(getTimestamp());
         boost::filesystem::rename(p, newName);
     }
-    m_db = WalletDB::init(dbFilePath, pass, seed.hash());
+    m_db = WalletDB::init(dbFilePath, pass, seed.hash(), m_walletReactor);
     if (!m_db)
-		return false;
+        return false;
 
     // generate default address
 
-    WalletAddress address = wallet::createAddress(m_db);
+    WalletAddress address = wallet::createAddress(*m_db);
     address.m_label = "default";
     m_db->saveAddress(address);
 
-	OnWalledOpened(pass);
+    OnWalledOpened(pass);
     return true;
 }
 
 bool AppModel::openWallet(const beam::SecString& pass)
 {
-    m_db = WalletDB::open(m_settings.getWalletStorage(), pass);
-	if (!m_db)
-		return false;
+    m_db = WalletDB::open(m_settings.getWalletStorage(), pass, m_walletReactor);
+    if (!m_db)
+        return false;
 
-	OnWalledOpened(pass);
-	return true;
+    OnWalledOpened(pass);
+    return true;
 }
 
 void AppModel::OnWalledOpened(const beam::SecString& pass)
 {
-	m_passwordHash = pass.hash();
-	start();
+    m_passwordHash = pass.hash();
+    start();
 }
 
 void AppModel::resetWalletImpl()
@@ -155,8 +155,13 @@ void AppModel::applySettingsChanges()
 
 void AppModel::startedNode()
 {
-	if (m_wallet && !m_wallet->isRunning())
-		m_wallet->start();
+    if (m_wallet && !m_wallet->isRunning())
+    {
+        disconnect(
+            &m_nodeModel, SIGNAL(failedToSyncNode(beam::wallet::ErrorType)),
+            this, SLOT(onFailedToStartNode(beam::wallet::ErrorType)));
+        m_wallet->start();
+    }
 }
 
 void AppModel::stoppedNode()
@@ -165,29 +170,50 @@ void AppModel::stoppedNode()
     disconnect(&m_nodeModel, SIGNAL(stoppedNode()), this, SLOT(stoppedNode()));
 }
 
+void AppModel::onFailedToStartNode(beam::wallet::ErrorType errorCode)
+{
+    if (errorCode == beam::wallet::ErrorType::ConnectionAddrInUse && m_wallet)
+    {
+        emit m_wallet->walletError(errorCode);
+        return;
+    }
+
+    if (errorCode == beam::wallet::ErrorType::TimeOutOfSync && m_wallet)
+    {
+        //% "Failed to start the integrated node: the timezone settings of your machine are out of sync. Please fix them and restart the wallet."
+        getMessages().addMessage(qtTrId("appmodel-failed-time-not-synced"));
+        return;
+    }
+
+    //% "Failed to start node. Please check your node configuration"
+    getMessages().addMessage(qtTrId("appmodel-failed-start-node"));
+}
+
 void AppModel::start()
 {
     m_nodeModel.setKdf(m_db->get_MasterKdf());
 
-	std::string nodeAddrStr;
+    std::string nodeAddrStr;
 
     if (m_settings.getRunLocalNode())
     {
-		connect(&m_nodeModel, SIGNAL(startedNode()), SLOT(startedNode()));
+        connect(&m_nodeModel, SIGNAL(startedNode()), SLOT(startedNode()));
+        connect(&m_nodeModel, SIGNAL(failedToStartNode(beam::wallet::ErrorType)), SLOT(onFailedToStartNode(beam::wallet::ErrorType)));
+        connect(&m_nodeModel, SIGNAL(failedToSyncNode(beam::wallet::ErrorType)), SLOT(onFailedToStartNode(beam::wallet::ErrorType)));
 
         m_nodeModel.startNode();
 
         io::Address nodeAddr = io::Address::LOCALHOST;
         nodeAddr.port(m_settings.getLocalNodePort());
-		nodeAddrStr = nodeAddr.str();
+        nodeAddrStr = nodeAddr.str();
     }
     else
-		nodeAddrStr = m_settings.getNodeAddress().toStdString();
+        nodeAddrStr = m_settings.getNodeAddress().toStdString();
 
-	m_wallet = std::make_shared<WalletModel>(m_db, nodeAddrStr);
+    m_wallet = std::make_shared<WalletModel>(m_db, nodeAddrStr, m_walletReactor);
 
-	if (!m_settings.getRunLocalNode())
-		m_wallet->start();
+    if (!m_settings.getRunLocalNode())
+        m_wallet->start();
 }
 
 WalletModel::Ptr AppModel::getWallet() const
@@ -235,14 +261,4 @@ void AppModel::changeWalletPassword(const std::string& pass)
     m_passwordHash.V = t.hash().V;
 
     m_wallet->getAsync()->changeWalletPassword(pass);
-}
-
-void AppModel::setRestoreWallet(bool value)
-{
-    m_restoreWallet = value;
-}
-
-bool AppModel::shouldRestoreWallet() const
-{
-    return m_restoreWallet;
 }

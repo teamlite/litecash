@@ -25,31 +25,28 @@
 #include <iomanip>
 #include <numeric>
 
-namespace std
-{
-    string to_string(const beam::WalletID& id)
-    {
-        static_assert(sizeof(id) == sizeof(id.m_Channel) + sizeof(id.m_Pk), "");
-
-		char szBuf[sizeof(id) * 2 + 1];
-		beam::to_hex(szBuf, &id, sizeof(id));
-
-		const char* szPtr = szBuf;
-		while (*szPtr == '0')
-			szPtr++;
-
-		if (!*szPtr)
-			szPtr--; // leave at least 1 symbol
-
-		return szPtr;
-	}
-}
-
 namespace beam
 {
     using namespace wallet;
     using namespace std;
     using namespace ECC;
+
+    namespace
+    {
+        bool IsValidTimeStamp(Timestamp currentBlockTime_s)
+        {
+            Timestamp currentTime_s = getTimestamp();
+            const Timestamp tolerance_s = 60 * 10; // 10 minutes tolerance.
+            currentBlockTime_s += tolerance_s;
+
+            if (currentTime_s > currentBlockTime_s)
+            {
+                LOG_INFO() << "It seems that node is not up to date";
+                return false;
+            }
+            return true;
+        }
+    }
 
     int WalletID::cmp(const WalletID& x) const
     {
@@ -85,77 +82,20 @@ namespace beam
         return proto::ImportPeerID(p, m_Pk);
     }
 
-    std::ostream& operator<<(std::ostream& os, const TxID& uuid)
+    bool check_receiver_address(const std::string& addr)
     {
-        os << "[" << to_hex(uuid.data(), uuid.size()) << "]";
-        return os;
+        WalletID walletID;
+        return
+            walletID.FromHex(addr) &&
+            walletID.IsValid();
     }
-
-    std::ostream& operator<<(std::ostream& os, const PrintableAmount& amount)
-    {
-        const string_view beams{ " beams " };
-        const string_view chattles{ " groth " };
-        auto width = os.width();
-
-        if (amount.m_showPoint)
-        {
-            os << setw(width - beams.length() - 1) << Amount(amount.m_value / Rules::Coin)
-                << "."
-                << (amount.m_value % Rules::Coin)
-                << beams.data();
-            return os;
-        }
-
-        if (amount.m_value >= Rules::Coin)
-        {
-            os << setw(width - beams.length()) << Amount(amount.m_value / Rules::Coin) << beams.data();
-        }
-        Amount c = amount.m_value % Rules::Coin;
-        if (c > 0 || amount.m_value == 0)
-        {
-            os << setw(width - chattles.length()) << c << chattles.data();
-        }
-        return os;
-    }
-
-	void PaymentConfirmation::get_Hash(Hash::Value& hv) const
-	{
-		Hash::Processor()
-			<< "PaymentConfirmation"
-			<< m_KernelID
-			<< m_Sender
-			<< m_Value
-			>> hv;
-	}
-
-	bool PaymentConfirmation::IsValid(const PeerID& pid) const
-	{
-		Point::Native pk;
-		if (!proto::ImportPeerID(pk, pid))
-			return false;
-
-		Hash::Value hv;
-		get_Hash(hv);
-
-		return m_Signature.IsValid(hv, pk);
-	}
-
-	void PaymentConfirmation::Sign(const Scalar::Native& sk)
-	{
-		Hash::Value hv;
-		get_Hash(hv);
-
-		m_Signature.Sign(hv, sk);
-	}
-
 
     const char Wallet::s_szNextUtxoEvt[] = "NextUtxoEvent";
 
-    Wallet::Wallet(IWalletDB::Ptr walletDB, TxCompletedAction&& action)
+    Wallet::Wallet(IWalletDB::Ptr walletDB, TxCompletedAction&& action, UpdateCompletedAction&& updateCompleted)
         : m_WalletDB{ walletDB }
-        , m_pNodeNetwork(nullptr)
-        , m_pWalletNetwork(nullptr)
         , m_TxCompletedAction{move(action)}
+        , m_UpdateCompleted{move(updateCompleted)}
         , m_LastSyncTotal(0)
         , m_OwnedNodesOnline(0)
     {
@@ -188,10 +128,14 @@ namespace beam
         return m_WalletDB->get_History();
     }
 
-    void Wallet::set_Network(proto::FlyClient::INetwork& netNode, IWalletNetwork& netWallet)
+    void Wallet::SetNodeEndpoint(std::shared_ptr<proto::FlyClient::INetwork> nodeEndpoint)
     {
-        m_pNodeNetwork = &netNode;
-        m_pWalletNetwork = &netWallet;
+        m_NodeEndpoint = nodeEndpoint;
+    }
+
+    void Wallet::AddMessageEndpoint(IWalletMessageEndpoint::Ptr endpoint)
+    {
+        m_MessageEndpoints.insert(endpoint);
     }
 
     Wallet::~Wallet()
@@ -205,12 +149,17 @@ namespace beam
 #undef THE_MACRO
     }
 
-    boost::optional<TxID> Wallet::transfer_money(const WalletID& from, const WalletID& to, Amount amount, Amount fee, bool sender, Height lifetime, ByteBuffer&& message)
+    TxID Wallet::transfer_money(const WalletID& from, const WalletID& to, Amount amount, Amount fee, bool sender, Height lifetime, Height responseTime, ByteBuffer&& message, bool saveReceiver)
     {
-        return transfer_money(from, to, AmountList{ amount }, fee, sender, lifetime, move(message));
+        return transfer_money(from, to, AmountList{ amount }, fee, {}, sender, lifetime, responseTime, move(message), saveReceiver);
     }
 
-    boost::optional<TxID> Wallet::transfer_money(const WalletID& from, const WalletID& to, const AmountList& amountList, Amount fee, bool sender, Height lifetime, ByteBuffer&& message)
+    TxID Wallet::transfer_money(const WalletID& from, const WalletID& to, Amount amount, Amount fee, const CoinIDList& coins, bool sender, Height lifetime, Height responseTime, ByteBuffer&& message, bool saveReceiver)
+    {
+        return transfer_money(from, to, AmountList{ amount }, fee, coins, sender, lifetime, responseTime, move(message), saveReceiver);
+    }
+
+    TxID Wallet::transfer_money(const WalletID& from, const WalletID& to, const AmountList& amountList, Amount fee, const CoinIDList& coins, bool sender, Height lifetime, Height responseTime, ByteBuffer&& message, bool saveReceiver)
     {
         auto receiverAddr = m_WalletDB->getAddress(to);
 
@@ -219,42 +168,62 @@ namespace beam
             if (receiverAddr->m_OwnID && receiverAddr->isExpired())
             {
                 LOG_INFO() << "Can't send to the expired address.";
-                return boost::optional<TxID>();
+                throw AddressExpiredException();
+            }
+
+            // update address comment if changed
+            auto messageStr = std::string(message.begin(), message.end());
+
+            if (messageStr != receiverAddr->m_label)
+            {
+                receiverAddr->m_label = messageStr;
+                m_WalletDB->saveAddress(*receiverAddr);
             }
         }
-        boost::optional<TxID> txID = wallet::GenerateTxID();
-        auto tx = constructTransaction(*txID, TxType::Simple);
-        Height currentHeight = m_WalletDB->getCurrentHeight();
+        else if (saveReceiver)
+        {
+            WalletAddress address;
+            address.m_walletID = to;
+            address.m_createTime = getTimestamp();
+            address.m_label = std::string(message.begin(), message.end());
+
+            m_WalletDB->saveAddress(address);
+        }
+
+        TxID txID = wallet::GenerateTxID();
+        auto tx = constructTransaction(txID, TxType::Simple);
 
         tx->SetParameter(TxParameterID::TransactionType, TxType::Simple, false);
-        tx->SetParameter(TxParameterID::MaxHeight, currentHeight + lifetime, false); // transaction is valid +lifetim blocks from currentHeight
+        tx->SetParameter(TxParameterID::Lifetime, lifetime, false);
+        tx->SetParameter(TxParameterID::PeerResponseHeight, responseTime); 
         tx->SetParameter(TxParameterID::IsInitiator, true, false);
         tx->SetParameter(TxParameterID::AmountList, amountList, false);
+        tx->SetParameter(TxParameterID::PreselectedCoins, coins, false);
 
         TxDescription txDescription;
 
-        txDescription.m_txId = *txID;
+        txDescription.m_txId = txID;
         txDescription.m_amount = std::accumulate(amountList.begin(), amountList.end(), 0ULL);
         txDescription.m_fee = fee;
-        txDescription.m_minHeight = currentHeight;
         txDescription.m_peerId = to;
         txDescription.m_myId = from;
         txDescription.m_message = move(message);
         txDescription.m_createTime = getTimestamp();
         txDescription.m_sender = sender;
         txDescription.m_status = TxStatus::Pending;
+        txDescription.m_selfTx = (receiverAddr && receiverAddr->m_OwnID);
         m_WalletDB->saveTx(txDescription);
 
-        m_Transactions.emplace(*txID, tx);
+        m_Transactions.emplace(txID, tx);
 
-        updateTransaction(*txID);
+        updateTransaction(txID);
 
         return txID;
     }
 
-    boost::optional<TxID> Wallet::split_coins(const WalletID& from, const AmountList& amountList, Amount fee, bool sender, Height lifetime,  ByteBuffer&& message)
+    TxID Wallet::split_coins(const WalletID& from, const AmountList& amountList, Amount fee, bool sender, Height lifetime, Height responseTime,  ByteBuffer&& message)
     {
-        return transfer_money(from, from, amountList, fee, sender, lifetime, move(message));
+        return transfer_money(from, from, amountList, fee, {}, sender, lifetime, responseTime, move(message));
     }
 
     TxID Wallet::swap_coins(const WalletID& from, const WalletID& to, Amount amount, Amount fee, wallet::AtomicSwapCoin swapCoin, Amount swapAmount)
@@ -311,6 +280,7 @@ namespace beam
             }
         }
         auto t = m_Transactions;
+        AsyncContextHolder holder(*this);
         for (auto& p : t)
         {
             auto tx = p.second;
@@ -325,6 +295,7 @@ namespace beam
             auto t = constructTransaction(tx.m_txId, TxType::Simple);
 
             m_Transactions.emplace(tx.m_txId, t);
+            UpdateOnSynced(t);
         }
     }
 
@@ -334,6 +305,27 @@ namespace beam
         for (auto& tx : txs)
         {
             ResumeTransaction(tx);
+        }
+    }
+
+    void Wallet::OnAsyncStarted()
+    {
+        if (m_AsyncUpdateCounter == 0)
+        {
+            LOG_DEBUG() << "Async update started!";
+        }
+        ++m_AsyncUpdateCounter;
+    }
+
+    void Wallet::OnAsyncFinished()
+    {
+        if (--m_AsyncUpdateCounter == 0)
+        {
+            LOG_DEBUG() << "Async update finished!";
+            if (m_UpdateCompleted)
+            {
+                m_UpdateCompleted();
+            }
         }
     }
 
@@ -409,13 +401,13 @@ namespace beam
             get_ParentObj().CheckSyncDone();
     }
 
-    void Wallet::confirm_kernel(const TxID& txID, const TxKernel& kernel)
+    void Wallet::confirm_kernel(const TxID& txID, const Merkle::Hash& kernelID)
     {
         if (auto it = m_Transactions.find(txID); it != m_Transactions.end())
         {
             MyRequestKernel::Ptr pVal(new MyRequestKernel);
             pVal->m_TxID = txID;
-            kernel.get_ID(pVal->m_Msg.m_ID);
+            pVal->m_Msg.m_ID = kernelID;
 
             if (PostReqUnique(*pVal))
                 LOG_INFO() << txID << " Get proof for kernel: " << pVal->m_Msg.m_ID;
@@ -429,7 +421,19 @@ namespace beam
 
     void Wallet::send_tx_params(const WalletID& peerID, SetTxParameter&& msg)
     {
-        m_pWalletNetwork->Send(peerID, std::move(msg));
+        for (auto& endpoint : m_MessageEndpoints)
+        {
+            endpoint->Send(peerID, msg);
+        }
+    }
+
+    void Wallet::UpdateOnNextTip(const TxID& txID)
+    {
+        auto it = m_Transactions.find(txID);
+        if (it != m_Transactions.end())
+        {
+            UpdateOnNextTip(it->second);
+        }
     }
 
     void Wallet::OnWalletMessage(const WalletID& myID, wallet::SetTxParameter&& msg)
@@ -471,7 +475,7 @@ namespace beam
 
     void Wallet::cancel_tx(const TxID& txId)
     {
-        LOG_INFO() << "Canceling tx " << txId;
+        LOG_INFO() << txId << " Canceling tx";
 
         if (auto it = m_Transactions.find(txId); it != m_Transactions.end())
         {
@@ -502,17 +506,32 @@ namespace beam
         if (it != m_Transactions.end())
         {
             auto tx = it->second;
-            bool bSynced = !SyncRemains();
+            bool bSynced = !SyncRemains() && IsNodeInSync();
 
             if (bSynced)
+            {
+                AsyncContextHolder holder(*this);
                 tx->Update();
+            }
             else
-                m_TransactionsToUpdate.insert(tx);
+            {
+                UpdateOnSynced(tx);
+            }
         }
         else
         {
             LOG_DEBUG() << txID << " Unexpected event";
         }
+    }
+
+    void Wallet::UpdateOnSynced(BaseTransaction::Ptr tx)
+    {
+        m_TransactionsToUpdate.insert(tx);
+    }
+
+    void Wallet::UpdateOnNextTip(wallet::BaseTransaction::Ptr tx)
+    {
+        m_NextTipTransactionToUpdate.insert(tx);
     }
 
     void Wallet::OnRequestComplete(MyRequestUtxo& r)
@@ -522,16 +541,13 @@ namespace beam
 
         const auto& proof = r.m_Res.m_Proofs.front(); // Currently - no handling for multiple coins for the same commitment.
 
-        Block::SystemState::Full sTip;
-        get_tip(sTip);
-
         proto::UtxoEvent evt;
         evt.m_Added = 1;
         evt.m_Kidv = r.m_CoinID;
         evt.m_Maturity = proof.m_State.m_Maturity;
-        evt.m_Height = sTip.m_Height;
+        evt.m_Height = MaxHeight; // not used, relevant only for spend events
 
-        ProcessUtxoEvent(evt, sTip.m_Height); // uniform processing for all confirmed utxos
+        ProcessUtxoEvent(evt); // uniform processing for all confirmed utxos
     }
 
     void Wallet::OnRequestComplete(MyRequestKernel& r)
@@ -548,6 +564,7 @@ namespace beam
 
             if (tx->SetParameter(TxParameterID::KernelProofHeight, r.m_Res.m_Proof.m_State.m_Height))
             {
+                AsyncContextHolder holder(*this);
                 tx->Update();
             }
         }
@@ -555,8 +572,8 @@ namespace beam
         {
             Block::SystemState::Full sTip;
             get_tip(sTip);
-            LOG_DEBUG() << r.m_TxID << " Unconfirmed height: " << sTip.m_Height;
             tx->SetParameter(TxParameterID::KernelUnconfirmedHeight, sTip.m_Height);
+            UpdateOnNextTip(tx);
         }
     }
 
@@ -598,13 +615,10 @@ namespace beam
 
     void Wallet::OnRequestComplete(MyRequestUtxoEvents& r)
     {
-        Block::SystemState::Full sTip;
-        m_WalletDB->get_History().get_Tip(sTip);
-
-        const std::vector<proto::UtxoEvent>& v = r.m_Res.m_Events;
+        std::vector<proto::UtxoEvent>& v = r.m_Res.m_Events;
 		for (size_t i = 0; i < v.size(); i++)
 		{
-			const proto::UtxoEvent& evt = v[i];
+			proto::UtxoEvent& evt = v[i];
 
 			// filter-out false positives
 			Scalar::Native sk;
@@ -612,11 +626,30 @@ namespace beam
 			m_WalletDB->calcCommitment(sk, comm, evt.m_Kidv);
 
 			if (comm == evt.m_Commitment)
-				ProcessUtxoEvent(evt, sTip.m_Height);
+				ProcessUtxoEvent(evt);
+			else
+			{
+				uint32_t iScheme = evt.m_Kidv.m_SubIdx >> 24;
+				if (!iScheme && evt.m_Kidv.m_SubIdx)
+				{
+					// Is it BB2.1?
+					evt.m_Kidv.m_SubIdx |= (2U << 24);
+
+					m_WalletDB->calcCommitment(sk, comm, evt.m_Kidv);
+
+					if (comm == evt.m_Commitment)
+						ProcessUtxoEvent(evt);
+				}
+			}
 		}
 
-        if (r.m_Res.m_Events.size() < proto::UtxoEvent::s_Max)
-            SetUtxoEventsHeight(sTip.m_Height);
+		if (r.m_Res.m_Events.size() < proto::UtxoEvent::s_Max)
+		{
+			Block::SystemState::Full sTip;
+			m_WalletDB->get_History().get_Tip(sTip);
+
+			SetUtxoEventsHeight(sTip.m_Height);
+		}
         else
         {
             SetUtxoEventsHeight(r.m_Res.m_Events.back().m_Height);
@@ -628,13 +661,13 @@ namespace beam
     {
         uintBigFor<Height>::Type var;
         var = h + 1; // we're actually saving the next
-        wallet::setVar(m_WalletDB, s_szNextUtxoEvt, var);
+        wallet::setVar(*m_WalletDB, s_szNextUtxoEvt, var);
     }
 
     Height Wallet::GetUtxoEventsHeightNext()
     {
         uintBigFor<Height>::Type var;
-        if (!wallet::getVar(m_WalletDB, s_szNextUtxoEvt, var))
+        if (!wallet::getVar(*m_WalletDB, s_szNextUtxoEvt, var))
             return 0;
 
         Height h;
@@ -642,60 +675,27 @@ namespace beam
         return h;
     }
 
-    void Wallet::ProcessUtxoEvent(const proto::UtxoEvent& evt, Height hTip)
+    void Wallet::ProcessUtxoEvent(const proto::UtxoEvent& evt)
     {
         Coin c;
         c.m_ID = evt.m_Kidv;
 
         bool bExists = m_WalletDB->find(c);
-
-        //const TxID* pTxID = NULL;
+		c.m_maturity = evt.m_Maturity;
 
         LOG_INFO() << "CoinID: " << evt.m_Kidv << " Maturity=" << evt.m_Maturity << (evt.m_Added ? " Confirmed" : " Spent");
 
         if (evt.m_Added)
-        {
-            c.m_maturity = evt.m_Maturity;
-            if (!c.m_confirmHeight || (c.m_confirmHeight > evt.m_Height)) // in case of std utxo proofs - the event height may be bigger than actual utxo height
-                c.m_confirmHeight = evt.m_Height;
-            c.m_status = (evt.m_Maturity <= hTip) ? Coin::Status::Available : Coin::Status::Maturing;
-
-            //if (c.m_createTxId)
-            //    updateTransaction(*c.m_createTxId);
-            //pTxID = c.m_createTxId.get_ptr();
-
-            if (!bExists)
-                c.m_createHeight = evt.m_Height;
-        }
+			c.m_confirmHeight = std::min(c.m_confirmHeight, evt.m_Height); // in case of std utxo proofs - the event height may be bigger than actual utxo height
         else
         {
             if (!bExists)
                 return; // should alert!
 
-            c.m_maturity = evt.m_Maturity;
-            c.m_status = Coin::Status::Spent;
-            //pTxID = c.m_spentTxId.get_ptr();
-        }
+			c.m_spentHeight = std::min(c.m_spentHeight, evt.m_Height); // reported spend height may be bigger than it actuall was (in case of macroblocks)
+		}
 
         m_WalletDB->save(c);
-
-/*        if (!pTxID)
-            return;
-
-        auto it = m_Transactions.find(*pTxID);
-        if (it == m_Transactions.end())
-            return;
-
-        Height h = 0;
-        const auto& pTx = it->second;
-        pTx->GetParameter(TxParameterID::KernelProofHeight, h);
-
-        if (!h || (h > evt.m_Height))
-        {
-            h = evt.m_Height;
-            pTx->SetParameter(TxParameterID::KernelProofHeight, h);
-            m_TransactionsToUpdate.insert(pTx);
-        }*/
     }
 
     void Wallet::OnRolledBack()
@@ -722,7 +722,7 @@ namespace beam
             {
                 h = 0;
                 pTx->SetParameter(TxParameterID::KernelProofHeight, h);
-                m_TransactionsToUpdate.insert(pTx);
+                UpdateOnSynced(pTx);
             }
         }
 
@@ -746,39 +746,24 @@ namespace beam
 
         RequestUtxoEvents();
 
-        auto t = m_Transactions;
-        for (auto& p : t)
+        for (auto& tx : m_NextTipTransactionToUpdate)
         {
-            auto tx = p.second;
-            tx->Update();
+            UpdateOnSynced(tx);
         }
-
-        // try to restore utxo state after reset, rollback and etc..
-        uint32_t nUnconfirmed = 0;
-        m_WalletDB->visit([&nUnconfirmed, this](const Coin& c)->bool
-        {
-            if (c.m_status == Coin::Unavailable
-                && ((c.m_createTxId.is_initialized()
-                && (m_Transactions.find(*c.m_createTxId) == m_Transactions.end())) || c.isReward()))
-            {
-                getUtxoProof(c.m_ID);
-                nUnconfirmed++;
-            }
-            return true;
-        });
-
-        if (nUnconfirmed)
-        {
-            LOG_INFO() << "Found " << nUnconfirmed << " unconfirmed utxo to proof";
-        }
+        m_NextTipTransactionToUpdate.clear();
 
         CheckSyncDone();
+
+        ProcessStoredMessages();
     }
 
     void Wallet::OnTipUnchanged()
     {
         LOG_INFO() << "Tip has not been changed";
-        notifySyncProgress();
+
+        CheckSyncDone();
+
+        ProcessStoredMessages();
     }
 
     void Wallet::getUtxoProof(const Coin::ID& cid)
@@ -828,13 +813,22 @@ namespace beam
         else
             ZeroObject(id);
 
+        Block::SystemState::ID currentID;
+        m_WalletDB->getSystemStateID(currentID);
+
         m_WalletDB->setSystemStateID(id);
         LOG_INFO() << "Current state is " << id;
         notifySyncProgress();
 
+        if (!IsValidTimeStamp(sTip.m_TimeStamp))
+        {
+            // we are not ready to process transactions
+            return;
+        }
         std::unordered_set<wallet::BaseTransaction::Ptr> txSet;
         txSet.swap(m_TransactionsToUpdate);
 
+        AsyncContextHolder async(*this);
         for (auto it = txSet.begin(); txSet.end() != it; it++)
         {
             wallet::BaseTransaction::Ptr pTx = *it;
@@ -870,8 +864,9 @@ namespace beam
         LOG_VERBOSE() << txId << " sending tx for registration";
 
 #ifndef NDEBUG
-        TxBase::Context ctx;
-        assert(data->IsValid(ctx));
+        TxBase::Context::Params pars;
+		TxBase::Context ctx(pars);
+		assert(data->IsValid(ctx));
 #endif // NDEBUG
 
         MyRequestTransaction::Ptr pReq(new MyRequestTransaction);
@@ -914,7 +909,7 @@ namespace beam
         }
 
         TxType type = TxType::Simple;
-        if (wallet::getTxParameter(m_WalletDB, msg.m_TxID, TxParameterID::TransactionType, type))
+        if (wallet::getTxParameter(*m_WalletDB, msg.m_TxID, TxParameterID::TransactionType, type))
         {
             // we return only active transactions
             return BaseTransaction::Ptr();
@@ -956,5 +951,35 @@ namespace beam
             return make_shared<AtomicSwapTransaction>(*this, m_WalletDB, id);
         }
         return wallet::BaseTransaction::Ptr();
+    }
+
+    void Wallet::ProcessStoredMessages()
+    {
+        if (m_MessageEndpoints.empty())
+        {
+            return;
+        }
+        {
+            auto messages = m_WalletDB->getWalletMessages();
+            for (auto& message : messages)
+            {
+                for (auto& endpoint : m_MessageEndpoints)
+                {
+                    endpoint->SendEncryptedMessage(message.m_PeerID, message.m_Message);
+                }
+                m_WalletDB->deleteWalletMessage(message.m_ID);
+            }
+        }
+    }
+
+    bool Wallet::IsNodeInSync() const
+    {
+        if (m_NodeEndpoint)
+        {
+            Block::SystemState::Full sTip;
+            get_tip(sTip);
+            return IsValidTimeStamp(sTip.m_TimeStamp);
+        }
+        return true; // to allow made air-gapped transactions
     }
 }

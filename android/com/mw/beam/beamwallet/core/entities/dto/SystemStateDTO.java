@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.mw.beam.LitecashWallet.core.entities.dto;
+package com.mw.beam.beamwallet.core.entities.dto;
 
 public class SystemStateDTO
 {
-	public byte[] hash;
+	public String hash;
 	public long height;
 }

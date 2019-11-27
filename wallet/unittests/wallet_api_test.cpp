@@ -68,7 +68,7 @@ namespace
     {
         void onInvalidJsonRpc(const json& msg) override {}
         
-#define MESSAGE_FUNC(strct, name) virtual void onMessage(int id, const strct& data) override {};
+#define MESSAGE_FUNC(strct, name, _) virtual void onMessage(int id, const strct& data) override {};
         WALLET_API_METHODS(MESSAGE_FUNC)
 #undef MESSAGE_FUNC
     };
@@ -111,7 +111,6 @@ namespace
             void onMessage(int id, const CreateAddress& data) override 
             {
                 WALLET_CHECK(id > 0);
-                WALLET_CHECK(data.metadata == "<meta>custom user data</meta>");
             }
         };
 
@@ -176,8 +175,9 @@ namespace
                 Coin coin{ Amount(1234+i) };
                 coin.m_ID.m_Type = Key::Type::Regular;
                 coin.m_ID.m_Idx = 132+i;
-                coin.m_createHeight = 1000;
                 coin.m_maturity = 60;
+				coin.m_confirmHeight = 60;
+				coin.m_status = Coin::Status::Available; // maturity is returned only for confirmed coins
                 getUtxo.utxos.push_back(coin);
             }
 
@@ -190,11 +190,10 @@ namespace
             WALLET_CHECK(result.size() == Count);
 
             for (int i = 0; i < Count; i++)
-            {
-                WALLET_CHECK(result[i]["id"] == 132 + i);
+            {                
+                WALLET_CHECK(Coin::FromString(result[i]["id"])->m_Idx == uint64_t(132 + i));
                 WALLET_CHECK(result[i]["amount"] == 1234 + i);
                 WALLET_CHECK(result[i]["type"] == "norm");
-                WALLET_CHECK(result[i]["height"] == 1000);
                 WALLET_CHECK(result[i]["maturity"] == 60);
             }
         }
@@ -220,6 +219,11 @@ namespace
                 //WALLET_CHECK(data.session == 15);
                 WALLET_CHECK(data.value == 12342342);
                 WALLET_CHECK(to_string(data.address) == "472e17b0419055ffee3b3813b98ae671579b0ac0dcd6f1a23b11a75ab148cc67");
+
+                if(data.from)
+                {
+                    WALLET_CHECK(to_string(*data.from) == "19d0adff5f02787819d8df43b442a49b43e72a8b0d04a7cf995237a0422d2be83b6");
+                }
             }
         };
 
@@ -238,6 +242,29 @@ namespace
             WALLET_CHECK(res["id"] == 123);
             WALLET_CHECK(res["result"]["txId"] > 0);
         }
+    }
+
+    void testInvalidSendJsonRpc(const std::string& msg)
+    {
+        class WalletApiHandler : public WalletApiHandlerBase
+        {
+        public:
+
+            void onInvalidJsonRpc(const json& msg) override
+            {
+                cout << msg["error"]["message"] << endl;
+            }
+
+            void onMessage(int id, const Send& data) override 
+            {
+                WALLET_CHECK(!"error, only onInvalidJsonRpc() should be called!!!");
+            }
+        };
+
+        WalletApiHandler handler;
+        WalletApi api(handler);
+
+        WALLET_CHECK(api.parse(msg.data(), msg.size()));
     }
 
     void testStatusJsonRpc(const std::string& msg)
@@ -355,6 +382,79 @@ namespace
             WALLET_CHECK(res["id"] == 123);
         }
     }
+
+    void testTxListPaginationJsonRpc(const std::string& msg)
+    {
+        class WalletApiHandler : public WalletApiHandlerBase
+        {
+        public:
+
+            void onInvalidJsonRpc(const json& msg) override
+            {
+                WALLET_CHECK(!"invalid list api json!!!");
+
+                cout << msg["error"]["message"] << endl;
+            }
+
+            void onMessage(int id, const TxList& data) override
+            {
+                WALLET_CHECK(id > 0);
+
+                WALLET_CHECK(data.skip == 10);
+                WALLET_CHECK(data.count == 10);
+            }
+        };
+
+        WalletApiHandler handler;
+        WalletApi api(handler);
+
+        WALLET_CHECK(api.parse(msg.data(), msg.size()));
+    }
+
+    void testValidateAddressJsonRpc(const std::string& msg, bool valid)
+    {
+        class WalletApiHandler : public WalletApiHandlerBase
+        {
+        public:
+            WalletApiHandler(bool valid_) : _valid(valid_)
+            {}
+
+            void onInvalidJsonRpc(const json& msg) override
+            {
+                WALLET_CHECK(!"invalid validate_address api json!!!");
+
+                cout << msg["error"]["message"] << endl;
+            }
+
+            void onMessage(int id, const ValidateAddress& data) override
+            {
+                WALLET_CHECK(id > 0);
+                WALLET_CHECK(data.address.IsValid() == _valid);
+            }
+        private:
+            bool _valid;
+        };
+
+        WalletApiHandler handler(valid);
+        WalletApi api(handler);
+
+        WALLET_CHECK(api.parse(msg.data(), msg.size()));
+
+        {
+            json res;
+            ValidateAddress::Response validateResponce;
+
+            validateResponce.isMine = true;
+            validateResponce.isValid = valid;
+
+            api.getResponse(123, validateResponce, res);
+            testResultHeader(res);
+
+            WALLET_CHECK(res["id"] == 123);
+            WALLET_CHECK(res["result"]["is_mine"] == true);
+            WALLET_CHECK(res["result"]["is_valid"] == valid);
+        }
+    }
 }
 
 int main()
@@ -443,6 +543,48 @@ int main()
         }
     }));
 
+    testInvalidSendJsonRpc(JSON_CODE(
+    {
+        "jsonrpc": "2.0",
+        "id" : 12345,
+        "method" : "tx_send",
+        "params" :
+        {
+            "session" : 15,
+            "value" : 12342342,
+            "from" : "wagagel",
+            "address" : "472e17b0419055ffee3b3813b98ae671579b0ac0dcd6f1a23b11a75ab148cc67"
+        }
+    }));
+
+    testSendJsonRpc(JSON_CODE(
+    {
+        "jsonrpc": "2.0",
+        "id" : 12345,
+        "method" : "tx_send",
+        "params" : 
+        {
+            "session" : 15,
+            "value" : 12342342,
+            "from" : "19d0adff5f02787819d8df43b442a49b43e72a8b0d04a7cf995237a0422d2be83b6",
+            "address" : "472e17b0419055ffee3b3813b98ae671579b0ac0dcd6f1a23b11a75ab148cc67"
+        }
+    }));
+
+    testInvalidSendJsonRpc(JSON_CODE(
+    {
+        "jsonrpc": "2.0",
+        "id" : 12345,
+        "method" : "tx_send",
+        "params" :
+        {
+            "session" : 15,
+            "value" : 12342342,
+            "from" : "19d0adff5f02787819d8df43b442a49b43e72a8b0d04a7cf995237a0422d2be83b6",
+            "address" : "wagagel"
+        }
+    }));
+
     testStatusJsonRpc(JSON_CODE(
     {
         "jsonrpc": "2.0",
@@ -480,6 +622,40 @@ int main()
             }
         }
     }));
+
+    testTxListPaginationJsonRpc(JSON_CODE(
+    {
+        "jsonrpc": "2.0",
+        "id" : 12345,
+        "method" : "tx_list",
+        "params" :
+        {
+            "skip" : 10,
+            "count" : 10
+        }
+    }));
+
+    testValidateAddressJsonRpc(JSON_CODE(
+    {
+        "jsonrpc": "2.0",
+        "id" : 12345,
+        "method" : "validate_address",
+        "params" :
+        {
+            "address" : "wagagel"
+        }
+    }), false);
+
+    testValidateAddressJsonRpc(JSON_CODE(
+    {
+        "jsonrpc": "2.0",
+        "id" : 12345,
+        "method" : "validate_address",
+        "params" :
+        {
+            "address" : "472e17b0419055ffee3b3813b98ae671579b0ac0dcd6f1a23b11a75ab148cc67"
+        }
+    }), true);
 
     return WALLET_CHECK_RESULT;
 }

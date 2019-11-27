@@ -15,10 +15,16 @@ namespace beamui
         return QString::fromStdString(id);
     }
 
+    QString toString(const beam::Merkle::Hash& walletID)
+    {
+        auto id = std::to_string(walletID);
+        return QString::fromStdString(id);
+    }
+
     QString BeamToString(const Amount& value)
     {
-        auto real_amount = double(int64_t(value)) / Rules::Coin;
-        QString qstr = QLocale().toString(real_amount, 'f', QLocale::FloatingPointShortest);
+        auto realAmount = double(int64_t(value)) / Rules::Coin;
+        QString qstr = QLocale().toString(realAmount, 'f', QLocale::FloatingPointShortest);
 
         return qstr;
     }
@@ -48,5 +54,13 @@ namespace beamui
     {
         double sum = accumulate(_samples.begin(), _samples.end(), 0.0);
         return sum / _samples.size();
+    }
+
+    double Filter::getMedian() const
+    {
+        vector<double> temp(_samples.begin(), _samples.end());
+        size_t medianPos = temp.size() / 2;
+        nth_element(temp.begin(), temp.begin() + medianPos, temp.end());
+        return temp[medianPos];
     }
 }

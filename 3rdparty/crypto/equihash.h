@@ -17,11 +17,11 @@
 
 #include <cstring>
 #include <exception>
+#include <stdexcept>
 #include <functional>
 #include <memory>
 #include <set>
 #include <vector>
-#include <stdexcept>
 
 typedef blake2b_state eh_HashState;
 typedef uint32_t eh_index;

@@ -1,6 +1,7 @@
 import QtQuick 2.11
 import QtQuick.Controls 2.4
 import QtQuick.Layouts 1.4
+import Beam.Wallet 1.0
 import "."
 
 Component
@@ -22,13 +23,16 @@ Component
 
             source: "qrc:/assets/start-logo.svg"
         }
-/*  remove the wording for now..
+
+/* remove..
+
         SFText 
         {
             Layout.alignment: Qt.AlignHCenter
 
-            text: qsTr("LITECASH")
-            color: "#25c1ff"
+            //% "CASH"
+            text: qsTrId("logo-name")
+            color: Style.accent_incoming
             font.pixelSize: 32
             font.styleName: "Bold"; font.weight: Font.Bold
             font.letterSpacing: 20
@@ -41,16 +45,48 @@ Component
             Layout.minimumHeight: 30
             Layout.maximumHeight: 40
         }
+
 */
+
         SFText
         {
             Layout.alignment: Qt.AlignHCenter
 
-            text: qsTr("The Speed of Lite")
+            //% "Scalable confidential cryptocurrency"
+            text: qsTrId("logo-description")
 
-            color: "#25c1ff"
+            color: Style.accent_incoming
             font.pixelSize: 32
             font.styleName: "Bold"; font.weight: Font.Bold
+        }
+
+        Item
+        {
+            id: stagingLabelAligner
+            visible: false
+            Layout.fillHeight: true
+            Layout.minimumHeight: 30
+            Layout.maximumHeight: 40
+        }
+
+        SFText
+        {
+            id: stagingLabel
+            visible: false
+            Layout.alignment: Qt.AlignHCenter
+            color: Style.content_secondary
+            font.pixelSize: 24
+            font.styleName: "Bold"; font.weight: Font.Bold
+        }
+
+        Component.onCompleted: {
+            var themeName = Theme.name();
+            if (themeName != "mainnet") {
+                stagingLabelAligner.visible = true;
+                stagingLabel.text = themeName.toUpperCase();
+                stagingLabel.visible = true;
+            }
+
         }
     }
 }

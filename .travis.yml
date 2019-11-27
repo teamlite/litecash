@@ -19,15 +19,18 @@ matrix:
         - brew install qt5 cmake boost
         - brew link qt5 --force
         - export PATH=/usr/local/opt/qt/bin:$PATH
-        - export LITECASH_WALLET_UI_IN="LitecashWallet-$LITECASH_VERSION-Darwin.dmg"
         - export OPENSSL_ROOT_DIR="/usr/local/opt/openssl"
-        - export LITECASH_WALLET_UI_OUT_VERLESS="Litecash-Wallet.dmg"
       env: 
         - BUILD_TYPE=Debug
         - OS_FOLDER=mac
       script:
         - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBRANCH_NAME=$TRAVIS_BRANCH . && make -j 4 && ctest --verbose && cpack;
-        - export LITECASH_WALLET_UI_OUT="Litecash-Wallet-$LITECASH_VERSION.dmg"
+        # extract build version
+        - LITECASH_VERSION="$(cat beam_version.gen)" && rm beam_version.gen
+        - echo LITECASH_VERSION = $LITECASH_VERSION
+        - export BEAM_WALLET_UI_IN="BeamWallet$LITECASH_DISPLAY_SUFFIX-$LITECASH_VERSION-Darwin.dmg"
+        - export BEAM_WALLET_UI_OUT="Beam-Wallet$LITECASH_DISPLAY_SUFFIX2-$LITECASH_VERSION.dmg"
+        - export BEAM_WALLET_UI_OUT_VERLESS="Beam-Wallet$LITECASH_DISPLAY_SUFFIX2.dmg"
 
 ###############################################################################
 # OSX Release
@@ -43,46 +46,38 @@ matrix:
         - brew unlink boost 
         - brew install cmake boost
         - sudo git clone --depth=1 https://github.com/nesbox/qt5-static-mac.git /usr/local/qt5-static
-        - export PATH=~/qt5-static/bin:$PATH
+        - export PATH=/usr/local/qt5-static/bin:$PATH
         - export OPENSSL_ROOT_DIR="/usr/local/opt/openssl"
         - export QT5_ROOT_DIR="/usr/local/qt5-static"
         - export QML_IMPORT_PATH="/usr/local/qt5-static/qml"
-        - export LITECASH_WALLET_UI_IN="LitecashWallet-$LITECASH_VERSION-Darwin.dmg"
-        - export LITECASH_WALLET_UI_OUT_VERLESS="Litecash-Wallet.dmg"
+        - openssl aes-256-cbc -K $encrypted_1f9ebee66ea9_key -iv $encrypted_1f9ebee66ea9_iv -in macos_cert.enc -out macos_cert.tar -d
+        - tar xvf macos_cert.tar
+        # create custom keychain
+        - security create-keychain -p travis macos-build.keychain
+        - security default-keychain -s macos-build.keychain
+        - security unlock-keychain -p travis macos-build.keychain
+        - security set-keychain-settings -t 3600 -l ~/Library/Keychains/macos-build.keychain
+        # import certificates
+        - security import distkey.p12 -P $MACOS_DISTRIBUTION_KEY_PASSWORD  -k ~/Library/Keychains/macos-build.keychain -T /usr/bin/codesign
+        - security import devapp.cer -k ~/Library/Keychains/macos-build.keychain -T /usr/bin/codesign
+        - security set-key-partition-list -S "apple-tool:,apple:" -s -k travis macos-build.keychain
       env: 
         - BUILD_TYPE=Release
         - OS_FOLDER=mac
       script:
-        - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DDEBUG_MESSAGES_IN_RELEASE_MODE=On -DLITECASH_LINK_TYPE=Static -DBRANCH_NAME=$TRAVIS_BRANCH . && make -j 4 && ctest --verbose && cpack;
-        - export LITECASH_WALLET_UI_OUT="Litecash-Wallet-$LITECASH_VERSION.dmg"
-
-###############################################################################
-# OSX Release GPU
-###############################################################################
-
-    - os: osx
-      language: cpp
-      osx_image: xcode9.3
-      install:
-        - export TZ=Etc/GMT-3
-        - brew update
-        - brew unlink cmake
-        - brew unlink boost 
-        - brew install cmake boost
-        - sudo git clone --depth=1 https://github.com/nesbox/qt5-static-mac.git /usr/local/qt5-static
-        - export PATH=~/qt5-static/bin:$PATH
-        - export OPENSSL_ROOT_DIR="/usr/local/opt/openssl"
-        - export QT5_ROOT_DIR="/usr/local/qt5-static"
-        - export QML_IMPORT_PATH="/usr/local/qt5-static/qml"
-        - export LITECASH_WALLET_UI_IN="LitecashWallet-$LITECASH_VERSION-Darwin.dmg"
-        - export LITECASH_WALLET_UI_OUT_VERLESS="Litecash-Wallet.dmg"
-      env: 
-        - BUILD_TYPE=Release
-        - OS_FOLDER=mac
-        - GPU_FOLDER=/gpu
-      script:
-        - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DDEBUG_MESSAGES_IN_RELEASE_MODE=On -DLITECASH_LINK_TYPE=Static -DBRANCH_NAME=$TRAVIS_BRANCH -DLITECASH_USE_GPU=On . && make -j 4 && ctest --verbose && cpack;
-        - export LITECASH_WALLET_UI_OUT="Litecash-Wallet-$LITECASH_VERSION.dmg"
+        - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DDEBUG_MESSAGES_IN_RELEASE_MODE=On -DBEAM_LINK_TYPE=Static -DBRANCH_NAME=$TRAVIS_BRANCH -DLITECASH_SIGN_MACOS_BINARY=On . && make -j 4 && ctest --verbose && cpack;
+        # extract build version
+        - LITECASH_VERSION="$(cat beam_version.gen)" && rm beam_version.gen
+        - echo LITECASH_VERSION = $LITECASH_VERSION
+        - export BEAM_WALLET_UI_IN="BeamWallet$LITECASH_DISPLAY_SUFFIX-$LITECASH_VERSION-Darwin.dmg"
+        - export BEAM_WALLET_UI_OUT="Beam-Wallet$LITECASH_DISPLAY_SUFFIX2-$LITECASH_VERSION.dmg"
+        - export BEAM_WALLET_UI_OUT_VERLESS="Beam-Wallet$LITECASH_DISPLAY_SUFFIX2.dmg"
+        # sign our builds
+        - codesign --force --deep --sign "$MACOS_SIGN_IDENTITY" beam/beam-node$LITECASH_TARGET_SUFFIX
+        - codesign --force --deep --sign "$MACOS_SIGN_IDENTITY" wallet/beam-wallet$LITECASH_TARGET_SUFFIX
+        - codesign --force --deep --sign "$MACOS_SIGN_IDENTITY" wallet/wallet-api$LITECASH_TARGET_SUFFIX
+        - codesign --force --deep --sign "$MACOS_SIGN_IDENTITY" explorer/explorer-node$LITECASH_TARGET_SUFFIX
+        - codesign --force --deep --sign "$MACOS_SIGN_IDENTITY" $BEAM_WALLET_UI_IN
 
 ###############################################################################
 # Linux Debug
@@ -108,15 +103,17 @@ matrix:
         - sudo apt-get install qt510declarative qt510svg libgl1-mesa-dev-lts-xenial
         - eval "CC=gcc-7 && CXX=g++-7"
         - export PATH=/opt/qt510/bin:$PATH
-        - export LITECASH_WALLET_UI_IN="LitecashWallet-$LITECASH_VERSION-Linux.deb"
-        - export LITECASH_WALLET_UI_OUT_VERLESS="Litecash-Wallet.deb"
       env: 
         - BUILD_TYPE=Debug
         - OS_FOLDER=linux
       script:
         - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBRANCH_NAME=$TRAVIS_BRANCH . && make -j 4 && ctest --verbose && cpack;
-        - export LITECASH_WALLET_UI_OUT="Litecash-Wallet-$LITECASH_VERSION.deb"
-
+        # extract build version
+        - LITECASH_VERSION="$(cat beam_version.gen)" && rm beam_version.gen
+        - echo LITECASH_VERSION = $LITECASH_VERSION
+        - export BEAM_WALLET_UI_IN="BeamWallet$LITECASH_DISPLAY_SUFFIX-$LITECASH_VERSION-Linux.deb"
+        - export BEAM_WALLET_UI_OUT="Beam-Wallet$LITECASH_DISPLAY_SUFFIX2-$LITECASH_VERSION.deb"
+        - export BEAM_WALLET_UI_OUT_VERLESS="Beam-Wallet$LITECASH_DISPLAY_SUFFIX2.deb"
 ###############################################################################
 # Linux Release
 ###############################################################################
@@ -142,50 +139,17 @@ matrix:
         - git clone --depth=1 https://github.com/nesbox/qt5-static-linux.git /home/travis/qt5-static
         - export QT5_ROOT_DIR="/home/travis/qt5-static"
         - export QML_IMPORT_PATH="/home/travis/qt5-static/qml"
-        - export LITECASH_WALLET_UI_IN="LitecashWallet-$LITECASH_VERSION-Linux.deb"
-        - export LITECASH_WALLET_UI_OUT_VERLESS="Litecash-Wallet.deb"
       env: 
         - BUILD_TYPE=Release
         - OS_FOLDER=linux
       script:
-        - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DDEBUG_MESSAGES_IN_RELEASE_MODE=On -DLITECASH_LINK_TYPE=Static -DBRANCH_NAME=$TRAVIS_BRANCH . && make -j 4 && ctest --verbose && cpack;
-        - export LITECASH_WALLET_UI_OUT="Litecash-Wallet-$LITECASH_VERSION.deb"
-
-###############################################################################
-# Linux Release GPU
-###############################################################################
-
-    - os: linux
-      language: cpp
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-7
-            - libboost-all-dev
-            - libssl-dev
-            - curl
-            - libxi-dev
-            - libcups2-dev
-      install:
-        - export TZ=Etc/GMT-3
-        - sudo apt install ocl-icd-* opencl-headers
-        - wget "https://cmake.org/files/v3.12/cmake-3.12.0-Linux-x86_64.sh"
-        - sudo sh cmake-3.12.0-Linux-x86_64.sh --skip-license --prefix=/usr
-        - eval "CC=gcc-7 && CXX=g++-7"
-        - git clone --depth=1 https://github.com/nesbox/qt5-static-linux.git /home/travis/qt5-static
-        - export QT5_ROOT_DIR="/home/travis/qt5-static"
-        - export QML_IMPORT_PATH="/home/travis/qt5-static/qml"
-        - export LITECASH_WALLET_UI_IN="LitecashWallet-$LITECASH_VERSION-Linux.deb"
-        - export LITECASH_WALLET_UI_OUT_VERLESS="Litecash-Wallet.deb"
-      env: 
-        - BUILD_TYPE=Release
-        - OS_FOLDER=linux
-        - GPU_FOLDER=/gpu
-      script:
-        - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DDEBUG_MESSAGES_IN_RELEASE_MODE=On -DLITECASH_LINK_TYPE=Static  -DBRANCH_NAME=$TRAVIS_BRANCH -DLITECASH_USE_GPU=On . && make -j 4 && ctest --verbose && cpack;
-        - export LITECASH_WALLET_UI_OUT="Litecash-Wallet-$LITECASH_VERSION.deb"
+        - cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DDEBUG_MESSAGES_IN_RELEASE_MODE=On -DBEAM_LINK_TYPE=Static -DBRANCH_NAME=$TRAVIS_BRANCH . && make -j 4 && ctest --verbose && cpack;
+        # extract build version
+        - LITECASH_VERSION="$(cat beam_version.gen)" && rm beam_version.gen
+        - echo LITECASH_VERSION = $LITECASH_VERSION
+        - export BEAM_WALLET_UI_IN="BeamWallet$LITECASH_DISPLAY_SUFFIX-$LITECASH_VERSION-Linux.deb"
+        - export BEAM_WALLET_UI_OUT="Beam-Wallet$LITECASH_DISPLAY_SUFFIX2-$LITECASH_VERSION.deb"
+        - export BEAM_WALLET_UI_OUT_VERLESS="Beam-Wallet$LITECASH_DISPLAY_SUFFIX2.deb"
 
 ###############################################################################
 # Android x86 Release
@@ -196,28 +160,78 @@ matrix:
       env:
         - ANDROID_ABI=x86
         - BUILD_TYPE=Release
+        - ANDROID_SDK_VERSION=23
       android:
         components:
           - tools
           - platform-tools
+          - android-23
       install:
         - echo y | sdkmanager "ndk-bundle"
         - wget "https://cmake.org/files/v3.12/cmake-3.12.0-Linux-x86_64.sh"
         - sudo sh cmake-3.12.0-Linux-x86_64.sh --skip-license --prefix=/usr
-        - sudo git clone --depth=1 https://github.com/nesbox/boost_1_68-android.git /usr/local/boost_1_68-android
-        - sudo git clone --depth=1 https://github.com/nesbox/Prebuilt-OpenSSL-Android.git /usr/local/Prebuilt-OpenSSL-Android
+        - sudo git clone --depth=1 https://github.com/BeamMW/boost-android.git /usr/local/boost_1_68-android
+        - sudo git clone --depth=1 https://github.com/BeamMW/openssl-android.git /usr/local/Prebuilt-OpenSSL-Android
         - export ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle
         - export BOOST_ROOT_ANDROID=/usr/local/boost_1_68-android
-        - export OPENSSL_ROOT_DIR_ANDROID=/usr/local/Prebuilt-OpenSSL-Android/Prebuilt
+        - export OPENSSL_ROOT_DIR_ANDROID=/usr/local/Prebuilt-OpenSSL-Android
         - export PATH=$ANDROID_NDK_HOME:$PATH
       script:
-        - cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake -DANDROID_ABI=$ANDROID_ABI -DCMAKE_BUILD_TYPE=$BUILD_TYPE .
+        - cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake -DANDROID_NATIVE_API_LEVEL=$ANDROID_SDK_VERSION -DANDROID_ABI=$ANDROID_ABI -DCMAKE_BUILD_TYPE=$BUILD_TYPE .
         - make wallet-jni -j4
       after_success:
+        # extract build version
+        - LITECASH_VERSION="$(cat beam_version.gen)" && rm beam_version.gen
+        - echo LITECASH_VERSION = $LITECASH_VERSION 
         - BUILDS_SERVER_PATH=${BUILD_SERVER}/files/$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/android-$ANDROID_ABI
+        - BUILDS_SERVER_LATEST_PATH=${BUILD_SERVER}/files/$TRAVIS_BRANCH/latest/$BUILD_TYPE/android-$ANDROID_ABI
         - tar -cvzf libwallet-jni-$LITECASH_VERSION.tar.gz --directory=$HOME/build/BeamMW/beam/android libwallet-jni.so com
+        - tar -cvzf libwallet-jni.tar.gz --directory=$HOME/build/BeamMW/beam/android libwallet-jni.so com
         - curl --retry 3 --ftp-create-dirs -T libwallet-jni-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_PATH/
+        - curl --retry 3 --ftp-create-dirs -T libwallet-jni.tar.gz $BUILDS_SERVER_LATEST_PATH/
         - artifacts upload --target-paths "$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/android-$ANDROID_ABI/" libwallet-jni-$LITECASH_VERSION.tar.gz
+        - artifacts upload --target-paths "$TRAVIS_BRANCH/latest/$BUILD_TYPE/android-$ANDROID_ABI/" libwallet-jni.tar.gz
+
+###############################################################################
+# Android x86_64 Release
+###############################################################################
+
+    - os: linux
+      language: android
+      env:
+        - ANDROID_ABI=x86_64
+        - BUILD_TYPE=Release
+        - ANDROID_SDK_VERSION=23
+      android:
+        components:
+          - tools
+          - platform-tools
+          - android-23
+      install:
+        - echo y | sdkmanager "ndk-bundle"
+        - wget "https://cmake.org/files/v3.12/cmake-3.12.0-Linux-x86_64.sh"
+        - sudo sh cmake-3.12.0-Linux-x86_64.sh --skip-license --prefix=/usr
+        - sudo git clone --depth=1 https://github.com/BeamMW/boost-android.git /usr/local/boost_1_68-android
+        - sudo git clone --depth=1 https://github.com/BeamMW/openssl-android.git /usr/local/Prebuilt-OpenSSL-Android
+        - export ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle
+        - export BOOST_ROOT_ANDROID=/usr/local/boost_1_68-android
+        - export OPENSSL_ROOT_DIR_ANDROID=/usr/local/Prebuilt-OpenSSL-Android
+        - export PATH=$ANDROID_NDK_HOME:$PATH
+      script:
+        - cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake -DANDROID_NATIVE_API_LEVEL=$ANDROID_SDK_VERSION -DANDROID_ABI=$ANDROID_ABI -DCMAKE_BUILD_TYPE=$BUILD_TYPE .
+        - make wallet-jni -j4
+      after_success:
+        # extract build version
+        - LITECASH_VERSION="$(cat beam_version.gen)" && rm beam_version.gen
+        - echo LITECASH_VERSION = $LITECASH_VERSION
+        - BUILDS_SERVER_PATH=${BUILD_SERVER}/files/$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/android-$ANDROID_ABI
+        - BUILDS_SERVER_LATEST_PATH=${BUILD_SERVER}/files/$TRAVIS_BRANCH/latest/$BUILD_TYPE/android-$ANDROID_ABI
+        - tar -cvzf libwallet-jni-$LITECASH_VERSION.tar.gz --directory=$HOME/build/BeamMW/beam/android libwallet-jni.so com
+        - tar -cvzf libwallet-jni.tar.gz --directory=$HOME/build/BeamMW/beam/android libwallet-jni.so com
+        - curl --retry 3 --ftp-create-dirs -T libwallet-jni-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_PATH/
+        - curl --retry 3 --ftp-create-dirs -T libwallet-jni.tar.gz $BUILDS_SERVER_LATEST_PATH/
+        - artifacts upload --target-paths "$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/android-$ANDROID_ABI/" libwallet-jni-$LITECASH_VERSION.tar.gz
+        - artifacts upload --target-paths "$TRAVIS_BRANCH/latest/$BUILD_TYPE/android-$ANDROID_ABI/" libwallet-jni.tar.gz
 
 ###############################################################################
 # Android ARMv7 Release
@@ -228,70 +242,134 @@ matrix:
       env:
         - ANDROID_ABI=armeabi-v7a
         - BUILD_TYPE=Release
+        - ANDROID_SDK_VERSION=23
       android:
         components:
           - tools
           - platform-tools
+          - android-23
       install:
         - echo y | sdkmanager "ndk-bundle"
         - wget "https://cmake.org/files/v3.12/cmake-3.12.0-Linux-x86_64.sh"
         - sudo sh cmake-3.12.0-Linux-x86_64.sh --skip-license --prefix=/usr
-        - sudo git clone --depth=1 https://github.com/nesbox/boost_1_68-android.git /usr/local/boost_1_68-android
-        - sudo git clone --depth=1 https://github.com/nesbox/Prebuilt-OpenSSL-Android.git /usr/local/Prebuilt-OpenSSL-Android
+        - sudo git clone --depth=1 https://github.com/BeamMW/boost-android.git /usr/local/boost_1_68-android
+        - sudo git clone --depth=1 https://github.com/BeamMW/openssl-android.git /usr/local/Prebuilt-OpenSSL-Android
         - export ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle
         - export BOOST_ROOT_ANDROID=/usr/local/boost_1_68-android
-        - export OPENSSL_ROOT_DIR_ANDROID=/usr/local/Prebuilt-OpenSSL-Android/Prebuilt
+        - export OPENSSL_ROOT_DIR_ANDROID=/usr/local/Prebuilt-OpenSSL-Android
         - export PATH=$ANDROID_NDK_HOME:$PATH
       script:
-        - cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake -DANDROID_ABI=$ANDROID_ABI -DCMAKE_BUILD_TYPE=$BUILD_TYPE .
+        - cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake -DANDROID_NATIVE_API_LEVEL=$ANDROID_SDK_VERSION -DANDROID_ABI=$ANDROID_ABI -DCMAKE_BUILD_TYPE=$BUILD_TYPE .
         - make wallet-jni -j4
       after_success:
+        # extract build version
+        - LITECASH_VERSION="$(cat beam_version.gen)" && rm beam_version.gen
+        - echo LITECASH_VERSION = $LITECASH_VERSION
         - BUILDS_SERVER_PATH=${BUILD_SERVER}/files/$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/android-$ANDROID_ABI
+        - BUILDS_SERVER_LATEST_PATH=${BUILD_SERVER}/files/$TRAVIS_BRANCH/latest/$BUILD_TYPE/android-$ANDROID_ABI
         - tar -cvzf libwallet-jni-$LITECASH_VERSION.tar.gz --directory=$HOME/build/BeamMW/beam/android libwallet-jni.so com
+        - tar -cvzf libwallet-jni.tar.gz --directory=$HOME/build/BeamMW/beam/android libwallet-jni.so com
         - curl --retry 3 --ftp-create-dirs -T libwallet-jni-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_PATH/
+        - curl --retry 3 --ftp-create-dirs -T libwallet-jni.tar.gz $BUILDS_SERVER_LATEST_PATH/
         - artifacts upload --target-paths "$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/android-$ANDROID_ABI/" libwallet-jni-$LITECASH_VERSION.tar.gz
+        - artifacts upload --target-paths "$TRAVIS_BRANCH/latest/$BUILD_TYPE/android-$ANDROID_ABI/" libwallet-jni.tar.gz
+
+###############################################################################
+# Android ARMv8 Release
+###############################################################################
+
+    - os: linux
+      language: android
+      env:
+        - ANDROID_ABI=arm64-v8a
+        - BUILD_TYPE=Release
+        - ANDROID_SDK_VERSION=23
+      android:
+        components:
+          - tools
+          - platform-tools
+          - android-23
+      install:
+        - echo y | sdkmanager "ndk-bundle"
+        - wget "https://cmake.org/files/v3.12/cmake-3.12.0-Linux-x86_64.sh"
+        - sudo sh cmake-3.12.0-Linux-x86_64.sh --skip-license --prefix=/usr
+        - sudo git clone --depth=1 https://github.com/BeamMW/boost-android.git /usr/local/boost_1_68-android
+        - sudo git clone --depth=1 https://github.com/BeamMW/openssl-android.git /usr/local/Prebuilt-OpenSSL-Android
+        - export ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle
+        - export BOOST_ROOT_ANDROID=/usr/local/boost_1_68-android
+        - export OPENSSL_ROOT_DIR_ANDROID=/usr/local/Prebuilt-OpenSSL-Android
+        - export PATH=$ANDROID_NDK_HOME:$PATH
+      script:
+        - cmake -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake -DANDROID_NATIVE_API_LEVEL=$ANDROID_SDK_VERSION -DANDROID_ABI=$ANDROID_ABI -DCMAKE_BUILD_TYPE=$BUILD_TYPE .
+        - make wallet-jni -j4
+      after_success:
+        # extract build version
+        - LITECASH_VERSION="$(cat beam_version.gen)" && rm beam_version.gen
+        - echo LITECASH_VERSION = $LITECASH_VERSION
+        - BUILDS_SERVER_PATH=${BUILD_SERVER}/files/$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/android-$ANDROID_ABI
+        - BUILDS_SERVER_LATEST_PATH=${BUILD_SERVER}/files/$TRAVIS_BRANCH/latest/$BUILD_TYPE/android-$ANDROID_ABI
+        - tar -cvzf libwallet-jni-$LITECASH_VERSION.tar.gz --directory=$HOME/build/BeamMW/beam/android libwallet-jni.so com
+        - tar -cvzf libwallet-jni.tar.gz --directory=$HOME/build/BeamMW/beam/android libwallet-jni.so com
+        - curl --retry 3 --ftp-create-dirs -T libwallet-jni-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_PATH/
+        - curl --retry 3 --ftp-create-dirs -T libwallet-jni.tar.gz $BUILDS_SERVER_LATEST_PATH/
+        - artifacts upload --target-paths "$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/android-$ANDROID_ABI/" libwallet-jni-$LITECASH_VERSION.tar.gz
+        - artifacts upload --target-paths "$TRAVIS_BRANCH/latest/$BUILD_TYPE/android-$ANDROID_ABI/" libwallet-jni.tar.gz
 
 ###############################################################################
 # Common part
 ###############################################################################
-
-# TODO: version detection should be in one place
-before_install:
-  - LITECASH_VERSION="1.1.$(git rev-list HEAD --count)"
-
 before_script:
   - curl -sL https://raw.githubusercontent.com/travis-ci/artifacts/master/install | bash
+  - LITECASH_TARGET_SUFFIX=""
+  - LITECASH_DISPLAY_SUFFIX=""
+  - LITECASH_DISPLAY_SUFFIX2=""
 
 after_success:
   # deploy using ftp server
-  - OS_FOLDER=$OS_FOLDER$GPU_FOLDER
   - BUILDS_SERVER_PATH=${BUILD_SERVER}/files/$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/$OS_FOLDER
-  - tar -cvzf beam-node-$LITECASH_VERSION.tar.gz --directory=$HOME/build/BeamMW/beam/beam beam-node cash-node.cfg
-  - tar -cvzf beam-wallet-cli-$LITECASH_VERSION.tar.gz --directory=$HOME/build/BeamMW/beam/wallet beam-wallet cash-wallet.cfg
-  - tar -cvzf wallet-api-$LITECASH_VERSION.tar.gz --directory=$HOME/build/BeamMW/beam/wallet wallet-api
+  - tar -cvzf beam-node$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz --directory=$HOME/build/BeamMW/beam/beam beam-node$LITECASH_TARGET_SUFFIX beam-node.cfg
+  - tar -cvzf beam-wallet-cli$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz --directory=$HOME/build/BeamMW/beam/wallet beam-wallet$LITECASH_TARGET_SUFFIX beam-wallet.cfg
+  - tar -cvzf wallet-api$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz --directory=$HOME/build/BeamMW/beam/wallet wallet-api$LITECASH_TARGET_SUFFIX wallet-api.cfg
+  - tar -cvzf explorer-node$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz --directory=$HOME/build/BeamMW/beam/explorer explorer-node$LITECASH_TARGET_SUFFIX explorer-node.cfg
+    
+  # upload binaries to FTP
+  - curl --retry 3 --ftp-create-dirs -T beam-node$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_PATH/
+  - curl --retry 3 --ftp-create-dirs -T beam-wallet-cli$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_PATH/
+  - curl --retry 3 --ftp-create-dirs -T wallet-api$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_PATH/
+  - curl --retry 3 --ftp-create-dirs -T explorer-node$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_PATH/
+  - curl --retry 3 --ftp-create-dirs -T "$HOME/build/BeamMW/beam/$BEAM_WALLET_UI_IN" "$BUILDS_SERVER_PATH/$BEAM_WALLET_UI_OUT"
+
+  # upload binaries to FTP, to the latest folder
+  - BUILDS_SERVER_LATEST_PATH=${BUILD_SERVER}/files/$TRAVIS_BRANCH/latest/$BUILD_TYPE/$OS_FOLDER
+  - curl --retry 3 --ftp-create-dirs -T beam-node$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_LATEST_PATH/beam-node$LITECASH_TARGET_SUFFIX.tar.gz
+  - curl --retry 3 --ftp-create-dirs -T beam-wallet-cli$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_LATEST_PATH/beam-wallet-cli$LITECASH_TARGET_SUFFIX.tar.gz
+  - curl --retry 3 --ftp-create-dirs -T wallet-api$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_LATEST_PATH/wallet-api$LITECASH_TARGET_SUFFIX.tar.gz
+  - curl --retry 3 --ftp-create-dirs -T explorer-node$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_LATEST_PATH/explorer-node$LITECASH_TARGET_SUFFIX.tar.gz
+  - curl --retry 3 --ftp-create-dirs -T "$HOME/build/BeamMW/beam/$BEAM_WALLET_UI_IN" "$BUILDS_SERVER_LATEST_PATH/$BEAM_WALLET_UI_OUT_VERLESS"
 
   # prep for deploy to AWS S3
-  - cp $HOME/build/BeamMW/beam/$LITECASH_WALLET_UI_IN $HOME/build/BeamMW/beam/$LITECASH_WALLET_UI_OUT
-   
-  # create package for advanced users
-  - mkdir pack && mkdir pack/wallet && mkdir pack/node && mkdir pack/ui
-  - cp wallet/beam-wallet* pack/wallet && cp beam/beam-node* pack/node && cp "$LITECASH_WALLET_UI_IN" pack/ui/$LITECASH_WALLET_UI_OUT_VERLESS
-  - tar -cvzf beam-pack-$LITECASH_VERSION.tar.gz --directory=$HOME/build/BeamMW/beam/pack wallet node ui
-
-  # upload binaries to FTP
-  - curl --retry 3 --ftp-create-dirs -T beam-node-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_PATH/
-  - curl --retry 3 --ftp-create-dirs -T beam-wallet-cli-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_PATH/
-  - curl --retry 3 --ftp-create-dirs -T wallet-api-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_PATH/
-  - curl --retry 3 --ftp-create-dirs -T "$HOME/build/BeamMW/beam/$LITECASH_WALLET_UI_IN" "$BUILDS_SERVER_PATH/$LITECASH_WALLET_UI_OUT"
-  - curl --retry 3 --ftp-create-dirs -T beam-pack-$LITECASH_VERSION.tar.gz $BUILDS_SERVER_PATH/pack/
+  - cp $HOME/build/BeamMW/beam/$BEAM_WALLET_UI_IN $HOME/build/BeamMW/beam/$BEAM_WALLET_UI_OUT
 
   # upload binaries to S3
-  - artifacts upload --target-paths "$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/$OS_FOLDER/" beam-node-$LITECASH_VERSION.tar.gz
-  - artifacts upload --target-paths "$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/$OS_FOLDER/" beam-wallet-cli-$LITECASH_VERSION.tar.gz
-  - artifacts upload --target-paths "$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/$OS_FOLDER/" wallet-api-$LITECASH_VERSION.tar.gz
-  - artifacts upload --target-paths "$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/$OS_FOLDER/" $HOME/build/BeamMW/beam/$LITECASH_WALLET_UI_OUT
-  - artifacts upload --target-paths "$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/$OS_FOLDER/pack/" beam-pack-$LITECASH_VERSION.tar.gz
+  - artifacts upload --target-paths "$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/$OS_FOLDER/" beam-node$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz
+  - artifacts upload --target-paths "$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/$OS_FOLDER/" beam-wallet-cli$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz
+  - artifacts upload --target-paths "$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/$OS_FOLDER/" wallet-api$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz
+  - artifacts upload --target-paths "$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/$OS_FOLDER/" explorer-node$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz
+  - artifacts upload --target-paths "$TRAVIS_BRANCH/$(date +%Y.%m.%d)/$BUILD_TYPE/$OS_FOLDER/" $HOME/build/BeamMW/beam/$BEAM_WALLET_UI_OUT
 
+  # prep for deploy to AWS S3, latest folder
+  - cp beam-node$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz beam-node$LITECASH_TARGET_SUFFIX.tar.gz
+  - cp beam-wallet-cli$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz beam-wallet-cli$LITECASH_TARGET_SUFFIX.tar.gz
+  - cp wallet-api$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz wallet-api$LITECASH_TARGET_SUFFIX.tar.gz
+  - cp explorer-node$LITECASH_TARGET_SUFFIX-$LITECASH_VERSION.tar.gz explorer-node$LITECASH_TARGET_SUFFIX.tar.gz
+  - cp $HOME/build/BeamMW/beam/$BEAM_WALLET_UI_IN $HOME/build/BeamMW/beam/$BEAM_WALLET_UI_OUT_VERLESS
+
+  # upload binaries to S3, to the latest folder
+  - artifacts upload --target-paths "$TRAVIS_BRANCH/latest/$BUILD_TYPE/$OS_FOLDER/" beam-node$LITECASH_TARGET_SUFFIX.tar.gz
+  - artifacts upload --target-paths "$TRAVIS_BRANCH/latest/$BUILD_TYPE/$OS_FOLDER/" beam-wallet-cli$LITECASH_TARGET_SUFFIX.tar.gz
+  - artifacts upload --target-paths "$TRAVIS_BRANCH/latest/$BUILD_TYPE/$OS_FOLDER/" wallet-api$LITECASH_TARGET_SUFFIX.tar.gz
+  - artifacts upload --target-paths "$TRAVIS_BRANCH/latest/$BUILD_TYPE/$OS_FOLDER/" explorer-node$LITECASH_TARGET_SUFFIX.tar.gz
+  - artifacts upload --target-paths "$TRAVIS_BRANCH/latest/$BUILD_TYPE/$OS_FOLDER/" $HOME/build/BeamMW/beam/$BEAM_WALLET_UI_OUT_VERLESS
 
 notifications:
   email:

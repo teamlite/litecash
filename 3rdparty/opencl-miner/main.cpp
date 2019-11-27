@@ -1,5 +1,6 @@
-// BEAM OpenCL Miner
+// CASH OpenCL Miner
 // Main Function
+// Copyright 2019 The Litecash Group
 // Copyright 2018 The Beam Team	
 // Copyright 2018 Wilke Trei
 
@@ -86,7 +87,7 @@ uint32_t cmdParser(vector<string> args, string &host, string &port, string &apiC
 int main(int argc, char* argv[]) {
 
 	cout << "====================================" << endl;
-	cout << "  BEAM Equihash 150/5 OpenCL miner  " << endl;
+	cout << "  CASH Equihash 150/5 OpenCL miner  " << endl;
 	cout << "====================================" << endl;
 
 	vector<string> cmdLineArgs(argv, argv+argc);
@@ -111,8 +112,8 @@ int main(int argc, char* argv[]) {
 
 		cout << "Parameters: " << endl;
 		cout << " --help / -h 			Showing this message" << endl;
-		cout << " --server <server>:<port>	The BEAM stratum server and port to connect to (required)" << endl;
-		cout << " --key <key>			The BEAM stratum server API key (required)" << endl;
+		cout << " --server <server>:<port>	The CASH stratum server and port to connect to (required)" << endl;
+		cout << " --key <key>			The CASH stratum server API key (required)" << endl;
 		cout << " --devices <numbers>		A comma seperated list of devices that should be used for mining (default: all in system)" << endl; 
 		cout << " --enable-cpu			Enable mining on OpenCL CPU devices" << endl;
 		exit(0);

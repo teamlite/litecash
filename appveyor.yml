@@ -2,7 +2,6 @@ version: '{build}'
 image: Visual Studio 2017
 
 environment:
-  LITECASH_VERSION_PREFIX: 1.1
   BOOST_ROOT: C:\Libraries\boost_1_67_0
   OPENSSL_ROOT_DIR: c:\beam-libs\openssl
   QT5_ROOT_DIR: c:\beam-libs\qt5-static-win
@@ -10,28 +9,12 @@ environment:
   BUILD_SERVER:
     secure: l9RqB2YbSnNIKZqTwnd67BHAXvbjmpj9zcf+YQPi9zfzsVeSysaoLD7gy4gSMjWurk2JVHjRpviw4bBxUbu2sA==  
   BUILD_CONFIG: RelWithDebInfo
-  matrix:
-    - USE_GPU: On
-      GPU_FOLDER: /gpu/
-    - USE_GPU: Off
-      GPU_FOLDER: /
-
-for:
-  - 
-    matrix:
-      only:
-        - USE_GPU: On
-    install:
-      - cmd: appveyor DownloadFile https://developer.nvidia.com/compute/cuda/10.0/Prod/local_installers/cuda_10.0.130_411.31_win10 -FileName cuda.exe    
-      - cmd: cuda.exe -s nvcc_10.0 nvprune_10.0 cublas_dev_10.0 cufft_dev_10.0 curand_dev_10.0 cusolver_dev_10.0 cusparse_dev_10.0 nvgraph_dev_10.0 npp_dev_10.0 nvrtc_dev_10.0 nvml_dev_10.0
-      - cmd: set PATH=%ProgramFiles%\NVIDIA GPU Computing Toolkit\CUDA\v10.0\bin;%ProgramFiles%\NVIDIA GPU Computing Toolkit\CUDA\v10.0\libnvvp;%PATH%
-      - cmd: appveyor DownloadFile "http://registrationcenter-download.intel.com/akdlm/irc_nas/vcp/13794/opencl_runtime_18.1_x64_setup.msi"
-      - cmd: start /wait msiexec /i opencl_runtime_18.1_x64_setup.msi /qn  /l*v msiexec2.log
-
+  PATH: c:\beam-libs\qt5-static-win\bin;$(PATH)
+ 
 before_build:
   - cmd: git clone --depth=1 https://github.com/BeamMW/libs.git c:/beam-libs
   - cmd: git clone --depth=1 https://github.com/nesbox/qt5-static-win.git c:/beam-libs/qt5-static-win
-  - cmd: cmake -G "Visual Studio 15 2017 Win64" -DCMAKE_BUILD_TYPE=%BUILD_CONFIG% -DLITECASH_LINK_TYPE=Static -DBRANCH_NAME=%APPVEYOR_REPO_BRANCH% -DLITECASH_USE_GPU=%USE_GPU% -DLITECASH_BUILD_JNI=On
+  - cmd: cmake -G "Visual Studio 15 2017 Win64" -DCMAKE_BUILD_TYPE=%BUILD_CONFIG% -DBEAM_LINK_TYPE=Static -DBRANCH_NAME=%APPVEYOR_REPO_BRANCH% -DLITECASH_BUILD_JNI=On .
 
 test_script:
   - cmd: ctest -C %BUILD_CONFIG% --verbose
@@ -42,89 +25,79 @@ build_script:
 after_build:
 - ps: $env:DATE=[TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, "Belarus Standard Time").ToString('yyyy.MM.dd')
 - ps: $env:TIME=[TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, "Belarus Standard Time").ToString('HH:mm:ss')
+- ps: $env:LITECASH_TARGET_SUFFIX=''
+- ps: $env:LITECASH_DISPLAY_SUFFIX=''
+- ps: $env:LITECASH_DISPLAY_SUFFIX2=''
+- ps: $env:LITECASH_DISPLAY_SUFFIX3=''
 - cmd: >-
     cpack --verbose -G NSIS -C %BUILD_CONFIG%
     
-    git rev-list HEAD --count > LITECASH_VERSION_REVISION
+    set /p LITECASH_VERSION=<beam_version.gen
+
+    echo LITECASH_VERSION = %LITECASH_VERSION%
+
+    del beam_version.gen
     
-    set /p LITECASH_VERSION_REVISION=<LITECASH_VERSION_REVISION
+    7z a c:/projects/beam/beam/%BUILD_CONFIG%/beam-node%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip c:/projects/beam/beam/%BUILD_CONFIG%/beam-node%LITECASH_TARGET_SUFFIX%.exe c:/projects/beam/beam/beam-node.cfg
     
-    set LITECASH_VERSION=%LITECASH_VERSION_PREFIX%.%LITECASH_VERSION_REVISION%
+    7z a c:/projects/beam/beam/%BUILD_CONFIG%/beam-wallet-cli%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip c:/projects/beam/wallet/%BUILD_CONFIG%/beam-wallet%LITECASH_TARGET_SUFFIX%.exe c:/projects/beam/wallet/beam-wallet.cfg
     
-    7z a c:/projects/beam/beam/%BUILD_CONFIG%/beam-node-%LITECASH_VERSION%.zip c:/projects/beam/beam/%BUILD_CONFIG%/beam-node.exe c:/projects/beam/beam/cash-node.cfg
-    
-    7z a c:/projects/beam/beam/%BUILD_CONFIG%/beam-wallet-cli-%LITECASH_VERSION%.zip c:/projects/beam/wallet/%BUILD_CONFIG%/litecash-wallet.exe c:/projects/beam/wallet/cash-wallet.cfg
-    
-    7z a c:/projects/beam/beam/%BUILD_CONFIG%/wallet-api-%LITECASH_VERSION%.zip c:/projects/beam/wallet/%BUILD_CONFIG%/wallet-api.exe
+    7z a c:/projects/beam/beam/%BUILD_CONFIG%/wallet-api%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip c:/projects/beam/wallet/%BUILD_CONFIG%/wallet-api%LITECASH_TARGET_SUFFIX%.exe c:/projects/beam/wallet/wallet-api.cfg
+
+    7z a c:/projects/beam/beam/%BUILD_CONFIG%/explorer-node%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip c:/projects/beam/explorer/%BUILD_CONFIG%/explorer-node%LITECASH_TARGET_SUFFIX%.exe c:/projects/beam/explorer/explorer-node.cfg
         
-    mkdir pack && cd pack && mkdir wallet && mkdir node && mkdir ui && cd ..
-    
     mkdir pdb
     
-    copy "c:\projects\beam\LitecashWallet-%LITECASH_VERSION%-win64.exe" "pack\ui\Litecash-Wallet.exe"
-    
-    copy beam\%BUILD_CONFIG%\beam-node.exe pack\node && copy beam\cash-node.cfg pack\node
-    
-    copy wallet\%BUILD_CONFIG%\litecash-wallet.exe pack\wallet && copy wallet\cash-wallet.cfg pack\wallet
-    
-    7z a c:/projects/beam/beam/beam-pack-%LITECASH_VERSION%.zip %CD%\pack\wallet %CD%\pack\node %CD%\pack\ui
-    
-    7z a c:/projects/beam/beam/beam-pdb-%LITECASH_VERSION%.zip "c:/projects/beam/ui/%BUILD_CONFIG%/Beam Wallet.pdb" "c:/projects/beam/beam/%BUILD_CONFIG%/beam-node.pdb" "c:/projects/beam/wallet/%BUILD_CONFIG%/beam-wallet.pdb"
+    7z a c:/projects/beam/beam/beam-pdb%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip "c:/projects/beam/ui/%BUILD_CONFIG%/Beam Wallet%LITECASH_DISPLAY_SUFFIX3%.pdb" "c:/projects/beam/beam/%BUILD_CONFIG%/beam-node%LITECASH_TARGET_SUFFIX%.pdb" "c:/projects/beam/wallet/%BUILD_CONFIG%/beam-wallet%LITECASH_TARGET_SUFFIX%.pdb"
 
-    copy c:\projects\beam\beam\%BUILD_CONFIG%\beam-node-%LITECASH_VERSION%.zip c:\projects\beam\beam-node-%LITECASH_VERSION%.zip
+    copy c:\projects\beam\beam\%BUILD_CONFIG%\beam-node%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip c:\projects\beam\beam-node%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip
 
-    copy c:\projects\beam\beam\%BUILD_CONFIG%\beam-wallet-cli-%LITECASH_VERSION%.zip c:\projects\beam\beam-wallet-cli-%LITECASH_VERSION%.zip
+    copy c:\projects\beam\beam\%BUILD_CONFIG%\beam-wallet-cli%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip c:\projects\beam\beam-wallet-cli%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip
 
-    copy c:\projects\beam\beam\%BUILD_CONFIG%\wallet-api-%LITECASH_VERSION%.zip c:\projects\beam\wallet-api-%LITECASH_VERSION%.zip
+    copy c:\projects\beam\beam\%BUILD_CONFIG%\wallet-api%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip c:\projects\beam\wallet-api%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip
 
-    copy c:\projects\beam\beam\beam-pack-%LITECASH_VERSION%.zip c:\projects\beam\pack\beam-pack-%LITECASH_VERSION%.zip
+    copy c:\projects\beam\beam\%BUILD_CONFIG%\explorer-node%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip c:\projects\beam\explorer-node%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip
 
-    copy c:\projects\beam\beam\beam-pdb-%LITECASH_VERSION%.zip c:\projects\beam\pdb\beam-pdb-%LITECASH_VERSION%.zip
+    copy c:\projects\beam\beam\beam-pdb%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip c:\projects\beam\pdb\beam-pdb%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip
 
-    copy c:\projects\beam\LitecashWallet-%LITECASH_VERSION%-win64.exe c:\projects\beam\Beam-Wallet-%LITECASH_VERSION%.exe
+    copy c:\projects\beam\BeamWallet%LITECASH_DISPLAY_SUFFIX%-%LITECASH_VERSION%-win64.exe c:\projects\beam\Beam-Wallet%LITECASH_DISPLAY_SUFFIX2%-%LITECASH_VERSION%.exe
 
 on_success:
 - ps: $env:DATE=[TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, "Belarus Standard Time").ToString('yyyy.MM.dd')
 - ps: $env:TIME=[TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, "Belarus Standard Time").ToString('HH:mm:ss')
 - cmd: >-
-    git rev-list HEAD --count > LITECASH_VERSION_REVISION
-    
-    set /p LITECASH_VERSION_REVISION=<LITECASH_VERSION_REVISION
-
-    set LITECASH_VERSION=%LITECASH_VERSION_PREFIX%.%LITECASH_VERSION_REVISION%
-      
-    set BUILDS_SERVER_PATH=%BUILD_SERVER%/files/%APPVEYOR_REPO_BRANCH%/%DATE%/Release/win%GPU_FOLDER%
+    set BUILDS_SERVER_PATH=%BUILD_SERVER%/files/%APPVEYOR_REPO_BRANCH%/%DATE%/Release/win
               
-    curl --retry 3 --ftp-create-dirs -T "c:/projects/beam/beam/%BUILD_CONFIG%/beam-node-%LITECASH_VERSION%.zip" "%BUILDS_SERVER_PATH%beam-node-%LITECASH_VERSION%.zip"
+    curl --retry 3 --ftp-create-dirs -T "c:/projects/beam/beam/%BUILD_CONFIG%/beam-node%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip" "%BUILDS_SERVER_PATH%/beam-node%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip"
 
-    curl --retry 3 --ftp-create-dirs -T "c:/projects/beam/beam/%BUILD_CONFIG%/beam-wallet-cli-%LITECASH_VERSION%.zip" "%BUILDS_SERVER_PATH%beam-wallet-cli-%LITECASH_VERSION%.zip"
+    curl --retry 3 --ftp-create-dirs -T "c:/projects/beam/beam/%BUILD_CONFIG%/beam-wallet-cli%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip" "%BUILDS_SERVER_PATH%/beam-wallet-cli%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip"
 
-    curl --retry 3 --ftp-create-dirs -T "c:/projects/beam/beam/%BUILD_CONFIG%/wallet-api-%LITECASH_VERSION%.zip" "%BUILDS_SERVER_PATH%wallet-api-%LITECASH_VERSION%.zip"
+    curl --retry 3 --ftp-create-dirs -T "c:/projects/beam/beam/%BUILD_CONFIG%/wallet-api%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip" "%BUILDS_SERVER_PATH%/wallet-api%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip"
 
-    curl --retry 3 --ftp-create-dirs -T "c:/projects/beam/LitecashWallet-%LITECASH_VERSION%-win64.exe" "%BUILDS_SERVER_PATH%Beam-Wallet-%LITECASH_VERSION%.exe"
+    curl --retry 3 --ftp-create-dirs -T "c:/projects/beam/beam/%BUILD_CONFIG%/explorer-node%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip" "%BUILDS_SERVER_PATH%/explorer-node%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip"
 
-    curl --retry 3 --ftp-create-dirs -T "c:/projects/beam/beam/beam-pack-%LITECASH_VERSION%.zip" "%BUILDS_SERVER_PATH%pack/beam-pack-%LITECASH_VERSION%.zip"
+    curl --retry 3 --ftp-create-dirs -T "c:/projects/beam/BeamWallet%LITECASH_DISPLAY_SUFFIX%-%LITECASH_VERSION%-win64.exe" "%BUILDS_SERVER_PATH%/Beam-Wallet%LITECASH_DISPLAY_SUFFIX2%-%LITECASH_VERSION%.exe"
 
-    curl --retry 3 --ftp-create-dirs -T "c:/projects/beam/beam/beam-pdb-%LITECASH_VERSION%.zip" "%BUILDS_SERVER_PATH%pdb/beam-pdb-%LITECASH_VERSION%.zip"
+    curl --retry 3 --ftp-create-dirs -T "c:/projects/beam/beam/beam-pdb%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip" "%BUILDS_SERVER_PATH%/pdb/beam-pdb%LITECASH_TARGET_SUFFIX%-%LITECASH_VERSION%.zip"
 
 artifacts:
   - path: beam-node-%LITECASH_VERSION%.zip
     name: BeamNode
 
   - path: beam-wallet-cli-%LITECASH_VERSION%.zip
-    name: LitecashWalletCli
+    name: BeamWalletCli
 
   - path: wallet-api-%LITECASH_VERSION%.zip
-    name: LitecashWalletApi
+    name: BeamWalletApi
 
-  - path: pack/beam-pack-%LITECASH_VERSION%.zip
-    name: BeamPack
+  - path: explorer-node-%LITECASH_VERSION%.zip
+    name: BeamNodeExplorer
 
   - path: pdb/beam-pdb-%LITECASH_VERSION%.zip
     name: BeamPdb
 
   - path: Beam-Wallet-%LITECASH_VERSION%.exe
-    name: LitecashWallet
+    name: BeamWallet
 
 deploy:
   provider: S3
@@ -136,8 +109,8 @@ deploy:
   region: us-west-2
   unzip: false
   set_public: true
-  folder: "%APPVEYOR_REPO_BRANCH%/%DATE%/Release/win%GPU_FOLDER%"
-  artifact: BeamPdb, BeamPack, LitecashWalletApi, LitecashWalletCli, BeamNode, LitecashWallet
+  folder: "%APPVEYOR_REPO_BRANCH%/%DATE%/Release/win/"
+  artifact: BeamPdb, BeamWalletApi, BeamNodeExplorer, BeamWalletCli, BeamNode, BeamWallet
 
 notifications:
   - provider: Email

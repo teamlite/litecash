@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import com.mw.beam.LitecashWallet.core.*;
-import com.mw.beam.LitecashWallet.core.entities.*;
-import com.mw.beam.LitecashWallet.core.entities.dto.*;
-import com.mw.beam.LitecashWallet.core.listeners.*;
+import com.mw.beam.beamwallet.core.*;
+import com.mw.beam.beamwallet.core.entities.*;
+import com.mw.beam.beamwallet.core.entities.dto.*;
+import com.mw.beam.beamwallet.core.listeners.*;
 
 import java.util.Arrays;
 
@@ -26,6 +26,12 @@ public class WalletJNI
 		System.out.println("Start Wallet JNI test...");
 
 		Api api = new Api();
+
+        {
+            System.out.println("Test address...");
+            System.out.println("invalid address: " + api.checkReceiverAddress("12"));
+            System.out.println("valid address: " + api.checkReceiverAddress("1232134"));
+        }
 
 		{
 			System.out.println("Test mnemonic...");
@@ -40,13 +46,13 @@ public class WalletJNI
 
 		if(api.isWalletInitialized("test"))
 		{
-			wallet = api.openWallet(nodeAddr, "test", "123");
+			wallet = api.openWallet("1.0.0.0", nodeAddr, "test", "123");
 
 			System.out.println(wallet == null ? "wallet opening error" : "wallet successfully opened");
 		}
 		else
 		{
-			wallet = api.createWallet(nodeAddr, "test", "123", "garbage;wild;fruit;vicious;jungle;snack;arrange;pink;scorpion;speed;used;frozen;");
+			wallet = api.createWallet("1.0.0.0", nodeAddr, "test", "123", "garbage;wild;fruit;vicious;jungle;snack;arrange;pink;scorpion;speed;used;frozen;", false);
 
 			System.out.println(wallet == null ? "wallet creation error" : "wallet successfully created");
 		}

@@ -17,15 +17,7 @@ Rectangle {
         id: statusbarModel
     }
 
-    color: Style.marine
-
-/*
-	Image {
-		fillMode: Image.PreserveAspectCrop
-		anchors.fill: parent
-		source: "qrc:/assets/icon.png"
-	}
-*/
+    color: Style.background_main
 
     MouseArea {
         id: mainMouseArea
@@ -55,7 +47,7 @@ Rectangle {
         id: sidebar
         width: 70
         height: 0
-        color: Style.navy
+        color: Style.navigation_background
         border.width: 0
         anchors.bottom: parent.bottom
         anchors.left: parent.left
@@ -95,14 +87,14 @@ Rectangle {
                             y: 6
                             width: 4
                             height: 48
-                            color: selectedItem == index ? Style.bright_teal : Style.silver
+                            color: selectedItem == index ? Style.active : Style.passive
                         }
 
                         DropShadow {
                             anchors.fill: indicator
                             radius: 5
                             samples: 9
-                            color: Style.bright_teal
+                            color: Style.active
                             source: indicator
                         }
 
@@ -169,7 +161,7 @@ Rectangle {
     Connections {
         target: viewModel
         onGotoStartScreen: { 
-            main.parent.source = "qrc:/start.qml"
+            main.parent.setSource("qrc:/start.qml", {"isLockedMode": true});
         }
     }
 

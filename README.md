@@ -40,6 +40,9 @@ node03.lite.cash:10000
 - March 2019     : Project started
 - June 2019      : Mainnet launch
 - July 2019      : Desktop Wallet App (Windows, Mac, Linux)
+- Sept 2019      : Project updated to 2.0
+- Nov  2019      : Project updated to 2.5
+
 
 # Current status
 

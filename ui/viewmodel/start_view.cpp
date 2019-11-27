@@ -33,13 +33,11 @@
 #include "model/app_model.h"
 #include "version.h"
 #include "wallet/secstring.h"
+#include "wallet/default_peers.h"
 
 #include <boost/filesystem.hpp>
 #include <thread>
 
-#ifdef LITECASH_USE_GPU
-#include "utility/gpu/gpu_tools.h"
-#endif
 
 using namespace beam;
 using namespace ECC;
@@ -47,20 +45,6 @@ using namespace std;
 
 namespace
 {
-    const char* Peers[] =
-    {
-#ifdef LITECASH_TESTNET
-
-	"142.93.81.224:10000",
-    "144.202.112.212:10000"
-       
- #else
-    
-    "142.93.81.224:10000",
-    "144.202.112.212:10000"
-#endif
-    };
-
     const QChar PHRASES_SEPARATOR = ';';
 
     boost::filesystem::path pathFromStdString(const std::string& path)
@@ -108,6 +92,49 @@ namespace
         }
 
         return walletDBs;
+    }
+
+    void removeNodeDataIfNeeded()
+    {
+        try
+        {
+            auto appDataPath = pathFromStdString(AppModel::getInstance()->getSettings().getAppDataPath());
+
+            if (!boost::filesystem::exists(appDataPath))
+            {
+                return;
+            }
+            string nodePath = AppModel::getInstance()->getSettings().getLocalNodeStorage();
+            try
+            {
+                beam::NodeDB nodeDB;
+                nodeDB.Open(nodePath.c_str());
+                return;
+            }
+            catch (const beam::NodeDBUpgradeException&)
+            {
+            }
+            
+            boost::filesystem::remove(pathFromStdString(nodePath));
+
+            std::vector<boost::filesystem::path> macroBlockFiles;
+            for (boost::filesystem::directory_iterator endDirIt, it{ appDataPath }; it != endDirIt; ++it)
+            {
+                if (it->path().filename().wstring().find(L"tempmb") == 0)
+                {
+                    macroBlockFiles.push_back(it->path());
+                }
+            }
+
+            for (auto& path : macroBlockFiles)
+            {
+                boost::filesystem::remove(path);
+            }
+        }
+        catch (std::exception &e)
+        {
+            LOG_ERROR() << e.what();
+        }
     }
 }
 
@@ -198,6 +225,7 @@ StartViewModel::StartViewModel()
     {
         // find all wallet.db in appData and defaultAppData
         findExistingWalletDB();
+        removeNodeDataIfNeeded();
     }
 }
 
@@ -222,7 +250,6 @@ void StartViewModel::setIsRecoveryMode(bool value)
     {
         m_isRecoveryMode = value;
         m_recoveryPhrases.clear();
-        AppModel::getInstance()->setRestoreWallet(value);
         emit isRecoveryModeChanged();
     }
 }
@@ -275,26 +302,6 @@ QChar StartViewModel::getPhrasesSeparator()
     return PHRASES_SEPARATOR;
 }
 
-void StartViewModel::setUseGpu(bool value)
-{
-#ifdef LITECASH_USE_GPU
-    if (value != AppModel::getInstance()->getSettings().getUseGpu())
-    {
-        AppModel::getInstance()->getSettings().setUseGpu(value);
-        emit useGpuChanged();
-    }
-#endif
-}
-
-bool StartViewModel::getUseGpu() const
-{
-#ifdef LITECASH_USE_GPU
-    return AppModel::getInstance()->getSettings().getUseGpu();
-#else
-    return false;
-#endif
-}
-
 bool StartViewModel::getIsRunLocalNode() const
 {
     return AppModel::getInstance()->getSettings().getRunLocalNode();
@@ -302,8 +309,9 @@ bool StartViewModel::getIsRunLocalNode() const
 
 QString StartViewModel::chooseRandomNode() const
 {
+    auto peers = getDefaultPeers();
     srand(time(0));
-    return QString(Peers[rand() % (sizeof(Peers) / sizeof(Peers[0]))]);
+    return QString(peers[rand() % peers.size()].c_str());
 }
 
 QString StartViewModel::walletVersion() const
@@ -314,11 +322,6 @@ QString StartViewModel::walletVersion() const
 int StartViewModel::getLocalPort() const
 {
     return AppModel::getInstance()->getSettings().getLocalNodePort();
-}
-
-int StartViewModel::getLocalMiningThreads() const
-{
-    return AppModel::getInstance()->getSettings().getLocalNodeMiningThreads();
 }
 
 QString StartViewModel::getRemoteNodeAddress() const
@@ -337,33 +340,23 @@ QQmlListProperty<WalletDBPathItem> StartViewModel::getWalletDBpaths()
     return QQmlListProperty<WalletDBPathItem>(this, m_walletDBpaths);
 }
 
-void StartViewModel::setupLocalNode(int port, int miningThreads, const QString& localNodePeer)
+void StartViewModel::setupLocalNode(int port, const QString& localNodePeer)
 {
     auto& settings = AppModel::getInstance()->getSettings();
-#ifdef LITECASH_USE_GPU
-    if (settings.getUseGpu())
-    {
-        settings.setLocalNodeMiningThreads(1);
-    }
-    else
-    {
-        settings.setLocalNodeMiningThreads(miningThreads);
-    }
-#else
-    settings.setLocalNodeMiningThreads(miningThreads);
-#endif
     auto localAddress = QString::asprintf("127.0.0.1:%d", port);
     settings.setNodeAddress(localAddress);
     settings.setLocalNodePort(port);
     settings.setRunLocalNode(true);
     QStringList peers;
-    for (size_t i = 0; i < _countof(Peers); ++i)
+    
+    for (const auto& peer : getDefaultPeers())
     {
-        if (localNodePeer != Peers[i])
+        if (localNodePeer != peer.c_str())
         {
-            peers.push_back(Peers[i]);
+            peers.push_back(peer.c_str());
         }
     }
+
     peers.push_back(localNodePeer);
     settings.setLocalNodePeers(peers);
 }
@@ -401,7 +394,8 @@ void StartViewModel::printRecoveryPhrases(QVariant viewData )
     {
         if (QPrinterInfo::availablePrinters().isEmpty())
         {
-            AppModel::getInstance()->getMessages().addMessage(tr("Printer is not found. Please, check your printer preferences."));
+            //% "Printer is not found. Please, check your printer preferences."
+            AppModel::getInstance()->getMessages().addMessage(qtTrId("start-view-printer-not-found-error"));
             return;
         }
         QImage image = qvariant_cast<QImage>(viewData);
@@ -449,7 +443,8 @@ void StartViewModel::printRecoveryPhrases(QVariant viewData )
     }
     catch (...)
     {
-        AppModel::getInstance()->getMessages().addMessage(tr("Failed to print seed phrases. Please, check your printer."));
+        //% "Failed to print seed phrases. Please, check your printer."
+        AppModel::getInstance()->getMessages().addMessage(qtTrId("start-view-printer-error"));
     }
 }
 
@@ -459,29 +454,6 @@ void StartViewModel::resetPhrases()
     m_generatedPhrases.clear();
     m_checkPhrases.clear();
     emit recoveryPhrasesChanged();
-}
-
-bool StartViewModel::showUseGpu() const
-{
-#ifdef LITECASH_USE_GPU
-    return true;
-#else
-    return false;
-#endif
-}
-
-bool StartViewModel::hasSupportedGpu()
-{
-#ifdef LITECASH_USE_GPU
-    if (!HasSupportedCard())
-    {
-        setUseGpu(false);
-        return false;
-    }
-    return true;
-#else
-    return false;
-#endif
 }
 
 bool StartViewModel::createWallet()
@@ -508,6 +480,12 @@ bool StartViewModel::openWallet(const QString& pass)
     // TODO make this secure
     SecString secretPass = pass.toStdString();
     return AppModel::getInstance()->openWallet(secretPass);
+}
+
+bool StartViewModel::checkWalletPassword(const QString& password) const
+{
+    SecString secretPassword = password.toStdString();
+    return AppModel::getInstance()->checkWalletPassword(secretPassword);
 }
 
 void StartViewModel::setPassword(const QString& pass)
@@ -576,8 +554,30 @@ void StartViewModel::copyToClipboard(const QString& text)
 
 QString StartViewModel::selectCustomWalletDB()
 {
-    QString filePath = QFileDialog::getOpenFileName(nullptr, tr("Select the wallet database file"),
-        QStandardPaths::writableLocation(QStandardPaths::DesktopLocation), tr("SQLite database file (*.db)"));
+    QString filePath = QFileDialog::getOpenFileName(
+        nullptr,
+        //% "Select the wallet database file"
+        qtTrId("start-view-select-db"),
+        //% "SQLite database file (*.db)"
+        QStandardPaths::writableLocation(QStandardPaths::DesktopLocation), qtTrId("start-view-db-file-filter"));
 
     return filePath;
+}
+
+QString StartViewModel::defaultPortToListen() const
+{
+#ifdef LITECASH_TESTNET
+    return "11005";
+#else
+    return "10005";
+#endif  // LITECASH_TESTNET
+}
+
+QString StartViewModel::defaultRemoteNodeAddr() const
+{
+#ifdef LITECASH_TESTNET
+    return "127.0.0.1:11005";
+#else
+    return "127.0.0.1:10005";
+#endif // LITECASH_TESTNET
 }

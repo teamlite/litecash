@@ -1,4 +1,5 @@
 set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR};${CMAKE_MODULE_PATH}")
+cmake_policy(SET CMP0074 NEW)
 
 include_directories(impl)
 
@@ -14,40 +15,15 @@ if(UNIX)
     set_source_files_properties(impl/crypto/equihash_impl.cpp PROPERTIES COMPILE_FLAGS -O2)
 endif()
 
-if(LITECASH_USE_GPU)
-
-    find_package(OpenCL REQUIRED)
-
-    if(OpenCL_FOUND)
-        include_directories(${OpenCL_INCLUDE_DIRS})
-        link_directories(${OpenCL_LIBRARIES})
-        message(STATUS "Using OpenCL ${OpenCL_VERSION_STRING}")
-    else()
-        message(FATAL_ERROR "error, OpenCL not found")
-    endif()
-
-    include(bin2h.cmake)
-
-    bin2h(SOURCE_FILE ${PROJECT_SOURCE_DIR}/3rdparty/opencl-miner/equihash_150_5.cl HEADER_FILE ${PROJECT_SOURCE_DIR}/3rdparty/opencl-miner/equihash_150_5.dat)
-
-    set(POW_SRC ${POW_SRC}
-        ${PROJECT_SOURCE_DIR}/pow/opencl_pow.cpp
-        ${PROJECT_SOURCE_DIR}/3rdparty/opencl-miner/clHost.cpp)
-
-    add_library(pow STATIC ${POW_SRC})
-
-    target_include_directories(pow PRIVATE ${PROJECT_SOURCE_DIR}/3rdparty/opencl-miner)
-    target_include_directories(pow PRIVATE ${PROJECT_SOURCE_DIR}/3rdparty/opencl-miner/clHeaders)
-
-    target_link_libraries(pow OpenCL::OpenCL)
-else()
-    add_library(pow STATIC ${POW_SRC})
-endif()
+add_library(pow STATIC ${POW_SRC})
 
 target_compile_definitions(pow PRIVATE ENABLE_MINING)
 
 add_dependencies(pow crypto)
 target_link_libraries(pow crypto)
+if(Boost_FOUND)
+    target_link_libraries(pow boost)
+endif()
 
 target_include_directories(pow PRIVATE ${PROJECT_SOURCE_DIR}/3rdparty/crypto)
 
@@ -60,13 +36,16 @@ add_library(external_pow STATIC
 add_dependencies(external_pow core p2p pow)
 target_link_libraries(external_pow p2p pow core)
 
-add_executable(miner_client miner_client.cpp ../core/block_crypt.cpp) # ???????????????????????????
-add_dependencies(miner_client external_pow)
-target_link_libraries(miner_client external_pow)
+if (NOT ANDROID)
+    add_executable(miner_client miner_client.cpp ../core/block_crypt.cpp) # ???????????????????????????
+    if (Boost_FOUND)
+        find_package(Boost COMPONENTS program_options)
+        add_dependencies(miner_client external_pow  Boost::program_options)
+        target_link_libraries(miner_client external_pow Boost::program_options)
+    else()
+        add_dependencies(miner_client external_pow boost_program_options)
+        target_link_libraries(miner_client external_pow boost_program_options)
+    endif()
 
-if(LITECASH_USE_GPU)
-    add_dependencies(miner_client gpu_tools)
-    target_link_libraries(miner_client gpu_tools)
+    add_subdirectory(unittests)
 endif()
-
-add_subdirectory(unittests)

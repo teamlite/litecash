@@ -21,6 +21,16 @@
 
 namespace beam
 {
+    class AddressExpiredException : public std::runtime_error
+    {
+    public:
+        explicit AddressExpiredException()
+            : std::runtime_error("")
+        {
+        }
+
+    };
+
     struct IWalletObserver : IWalletDbObserver
     {
         virtual void onSyncProgress(int done, int total) = 0;
@@ -43,9 +53,11 @@ namespace beam
     };
 
     // wallet-wallet comm
-    struct IWalletNetwork
+    struct IWalletMessageEndpoint
     {
-        virtual void Send(const WalletID& peerID, wallet::SetTxParameter&& msg) = 0;
+        using Ptr = std::shared_ptr<IWalletMessageEndpoint>;
+        virtual void Send(const WalletID& peerID, const wallet::SetTxParameter& msg) = 0;
+        virtual void SendEncryptedMessage(const WalletID& peerID, const ByteBuffer& msg) = 0;
     };
 
 
@@ -56,15 +68,18 @@ namespace beam
         using Callback = std::function<void()>;
     public:
         using TxCompletedAction = std::function<void(const TxID& tx_id)>;
+        using UpdateCompletedAction = std::function<void()>;
 
-        Wallet(IWalletDB::Ptr walletDB, TxCompletedAction&& action = TxCompletedAction());
+        Wallet(IWalletDB::Ptr walletDB, TxCompletedAction&& action = TxCompletedAction(), UpdateCompletedAction&& updateCompleted = UpdateCompletedAction());
         virtual ~Wallet();
 
-        void set_Network(proto::FlyClient::INetwork&, IWalletNetwork&);
+        void SetNodeEndpoint(std::shared_ptr<proto::FlyClient::INetwork> nodeEndpoint);
+        void AddMessageEndpoint(IWalletMessageEndpoint::Ptr endpoint);
 
-        boost::optional<TxID> transfer_money(const WalletID& from, const WalletID& to, Amount amount, Amount fee = 0, bool sender = true, Height lifetime = 120, ByteBuffer&& message = {} );
-        boost::optional<TxID> transfer_money(const WalletID& from, const WalletID& to, const AmountList& amountList, Amount fee = 0, bool sender = true, Height lifetime = 120, ByteBuffer&& message = {});
-        boost::optional<TxID> split_coins(const WalletID& from, const AmountList& amountList, Amount fee = 0, bool sender = true, Height lifetime = 120, ByteBuffer&& message = {});
+        TxID transfer_money(const WalletID& from, const WalletID& to, Amount amount, Amount fee = 0, bool sender = true, Height lifetime = 120, Height responseTime = 12*60, ByteBuffer&& message = {}, bool saveReceiver = false);
+        TxID transfer_money(const WalletID& from, const WalletID& to, Amount amount, Amount fee = 0, const CoinIDList& coins = {}, bool sender = true, Height lifetime = 120, Height responseTime = 12 * 60, ByteBuffer&& message = {}, bool saveReceiver = false);
+        TxID transfer_money(const WalletID& from, const WalletID& to, const AmountList& amountList, Amount fee = 0, const CoinIDList& coins = {}, bool sender = true, Height lifetime = 120, Height responseTime = 12 * 60, ByteBuffer&& message = {}, bool saveReceiver = false);
+        TxID split_coins(const WalletID& from, const AmountList& amountList, Amount fee = 0, bool sender = true, Height lifetime = 120, Height responseTime = 12 * 60, ByteBuffer&& message = {});
         TxID swap_coins(const WalletID& from, const WalletID& to, Amount amount, Amount fee, wallet::AtomicSwapCoin swapCoin, Amount swapAmount);
         void Refresh();
 
@@ -78,13 +93,17 @@ namespace beam
         void RefreshTransactions();
         void ResumeTransaction(const TxDescription& tx);
         void ResumeAllTransactions();
+
+        void OnAsyncStarted() override;
+        void OnAsyncFinished() override;
         void on_tx_completed(const TxID& txID) override;
 
         void confirm_outputs(const std::vector<Coin>&) override;
-        void confirm_kernel(const TxID&, const TxKernel&) override;
+        void confirm_kernel(const TxID&, const Merkle::Hash&) override;
         bool get_tip(Block::SystemState::Full& state) const override;
         void send_tx_params(const WalletID& peerID, wallet::SetTxParameter&&) override;
         void register_tx(const TxID& txId, Transaction::Ptr) override;
+        void UpdateOnNextTip(const TxID&) override;
 
         void OnWalletMessage(const WalletID& peerID, wallet::SetTxParameter&&) override;
 
@@ -109,15 +128,19 @@ namespace beam
         void report_sync_progress();
         void notifySyncProgress();
         void updateTransaction(const TxID& txID);
+        void UpdateOnSynced(wallet::BaseTransaction::Ptr tx);
+        void UpdateOnNextTip(wallet::BaseTransaction::Ptr tx);
         void saveKnownState();
         void RequestUtxoEvents();
         void AbortUtxoEvents();
-        void ProcessUtxoEvent(const proto::UtxoEvent&, Height hTip);
+        void ProcessUtxoEvent(const proto::UtxoEvent&);
         void SetUtxoEventsHeight(Height);
         Height GetUtxoEventsHeightNext();
 
         wallet::BaseTransaction::Ptr getTransaction(const WalletID& myID, const wallet::SetTxParameter& msg);
         wallet::BaseTransaction::Ptr constructTransaction(const TxID& id, wallet::TxType type);
+        void ProcessStoredMessages();
+        bool IsNodeInSync() const;
 
     private:
 
@@ -175,10 +198,10 @@ namespace beam
         } \
         bool PostReqUnique(MyRequest##type& x) \
         { \
-            if (m_Pending##type.end() != m_Pending##type.find(x)) \
+            if (!m_NodeEndpoint || m_Pending##type.end() != m_Pending##type.find(x)) \
                 return false; \
             AddReq(x); \
-            m_pNodeNetwork->PostRequest(x, m_RequestHandler); \
+            m_NodeEndpoint->PostRequest(x, m_RequestHandler); \
              \
             if (SyncTasks::type::b) \
                 m_LastSyncTotal++; \
@@ -189,14 +212,17 @@ namespace beam
 #undef THE_MACRO
 
         IWalletDB::Ptr m_WalletDB;
-        proto::FlyClient::INetwork* m_pNodeNetwork;
-        IWalletNetwork* m_pWalletNetwork;
+        std::shared_ptr<proto::FlyClient::INetwork> m_NodeEndpoint;
         std::map<TxID, wallet::BaseTransaction::Ptr> m_Transactions;
         std::unordered_set<wallet::BaseTransaction::Ptr> m_TransactionsToUpdate;
+        std::unordered_set<wallet::BaseTransaction::Ptr> m_NextTipTransactionToUpdate;
         TxCompletedAction m_TxCompletedAction;
+        UpdateCompletedAction m_UpdateCompleted;
         uint32_t m_LastSyncTotal;
         uint32_t m_OwnedNodesOnline;
 
         std::vector<IWalletObserver*> m_subscribers;
+        std::set<IWalletMessageEndpoint::Ptr> m_MessageEndpoints;
+        int m_AsyncUpdateCounter = 0;
     };
 }

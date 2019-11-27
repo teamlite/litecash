@@ -57,8 +57,8 @@ release/
 cmake-build-*/
 
 wallet/unittests/wallet_test
-litecash/litecash
-litecash/unittests/node_test
+beam/beam
+beam/unittests/node_test
 bin/address_test
 bin/asyncevent_test
 bin/reactor_test
@@ -96,5 +96,14 @@ CMakeSettings.json
 /p2p/unittest/twopeers_test
 /utility/unittest/bridge_test
 /utility/unittest/config_test
-litecash/wallet.dat
+beam/wallet.dat
 3rdparty/opencl-miner/equihash_150_5.dat
+ui/beam.rc
+ui/beam.png
+ui/beam.icns
+ui/icon.ico
+ui/Info.plist
+ui/beam.desktop
+ui/*.qm
+ui/translations.qrc
+beam_version.gen

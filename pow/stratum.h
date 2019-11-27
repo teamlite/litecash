@@ -17,9 +17,7 @@
 #include "utility/io/fragment_writer.h"
 #include <string>
 
-namespace beam {
-
-namespace stratum {
+namespace beam::stratum {
 
 #define STRATUM_METHODS(macro) \
     macro(0, null_method, Dummy) \
@@ -30,7 +28,7 @@ namespace stratum {
     macro(5, cancel, Cancel)
 
 #define STRATUM_RESULTS(macro) \
-    macro(0, no_error, "") \
+    macro(0, no_error, "Success") \
     macro(1, solution_accepted, "accepted") \
     macro(2, solution_rejected, "rejected") \
     macro(3, solution_expired, "expired") \
@@ -93,11 +91,12 @@ struct Login : Message {
 /// Server posts a job
 struct Job : Message {
     std::string input;
-    uint32_t difficulty;
+    uint32_t difficulty=0;
+    Height height=0;
 
     Job() = default;
 
-    Job(const std::string& _id, const Merkle::Hash& _input, const Block::PoW& _pow);
+    Job(const std::string& _id, const Merkle::Hash& _input, const Block::PoW& _pow, Height height);
 };
 
 /// Servers cancel job with given id
@@ -122,8 +121,9 @@ struct Solution : Message {
 };
 
 struct Result : Message {
-    ResultCode code;
+    ResultCode code=no_error;
     std::string description;
+    std::string nonceprefix;
 
     Result() = default;
 
@@ -160,4 +160,4 @@ STRATUM_METHODS(DEF_SERIALIZE_JSON)
 
 #undef DEF_SERIALIZE_JSON
 
-}} //namespaces
+} //namespace
