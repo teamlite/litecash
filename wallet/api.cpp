@@ -83,10 +83,11 @@ namespace beam
         {
             std::string expiration = params["expiration"];
 
-            static std::map<std::string, EditAddress::Expiration> Items =
+            static std::map<std::string, AddressData::Expiration> Items =
             {
-                {"24h",  EditAddress::OneDay},
-                {"never", EditAddress::Never},
+                {"never", AddressData::Never},
+                {"24h",  tAddressData::OneDay},
+                {"expired", AddressData::Expired},
             };
 
             if(Items.count(expiration) == 0) throwInvalidJsonRpc(id);
