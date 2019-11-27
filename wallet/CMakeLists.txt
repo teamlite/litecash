@@ -27,7 +27,7 @@ if (NOT ANDROID)
     target_include_directories(${TARGET_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/external)
 
     if(LINUX)
-	    target_link_libraries(${TARGET_NAME} -static-libstdc++ -static-libgcc -lstdc++)
+	    target_link_libraries(${TARGET_NAME} -static-libstdc++ -static-libgcc)
     endif()
 
     configure_file("${PROJECT_SOURCE_DIR}/version.h.in" "${CMAKE_CURRENT_BINARY_DIR}/version.h")
@@ -48,7 +48,7 @@ if (NOT ANDROID)
     target_link_libraries(${WALLET_API_NAME} wallet utility wallet_api_proto cli)
 
     if(LINUX)
-        target_link_libraries(${WALLET_API_NAME} -static-libstdc++ -static-libgcc -lstdc++)
+        target_link_libraries(${WALLET_API_NAME} -static-libstdc++ -static-libgcc)
     endif()
 
     add_subdirectory(unittests)
