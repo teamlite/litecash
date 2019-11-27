@@ -51,6 +51,13 @@ namespace beam
     macro(TxList,           "tx_list",          API_READ_ACCESS)    \
     macro(WalletStatus,     "wallet_status",    API_READ_ACCESS)
 
+    struct AddressData
+    {
+        boost::optional<std::string> comment;
+        enum Expiration { Never, OneDay, Expired };
+        boost::optional<Expiration> expiration;
+    };
+
     struct CreateAddress
     {
         int lifetime;
