@@ -86,7 +86,7 @@ namespace beam
             static std::map<std::string, AddressData::Expiration> Items =
             {
                 {"never", AddressData::Never},
-                {"24h",  tAddressData::OneDay},
+                {"24h",  AddressData::OneDay},
                 {"expired", AddressData::Expired},
             };
 
