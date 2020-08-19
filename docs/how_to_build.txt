@@ -31,6 +31,49 @@ Add proper QT 5.11 repository depending on your system https://launchpad.net/~be
 Go to Litecash project folder and call cmake -DCMAKE_BUILD_TYPE=Release . && make -j4.
 You'll find binaries in litecash/..., wallet/..., ui/..., explorer/... subfolders.
 
+Linux - Ubuntu 20.04 
+--------------------
+sudo apt install git
+git clone https://github.com/teamlite/litecash.git
+
+- Install gcc7 boost ssl packages.
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo apt update
+sudo apt install g++-7 libboost-all-dev libssl-dev -y
+
+- Set it up so the symbolic links gcc, g++ point to the newer version:
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 \
+                           --slave /usr/bin/g++ g++ /usr/bin/g++-7 
+sudo update-alternatives --config gcc
+
+- Verify that it worked with
+  gcc --version
+  g++ --version
+
+- Install latest CMake
+wget "https://cmake.org/files/v3.12/cmake-3.12.0-Linux-x86_64.sh"
+sudo sh cmake-3.12.0-Linux-x86_64.sh --skip-license --prefix=/usr
+
+- Install QT5
+
+sudo apt install qtdeclarative5-dev libqt5svg5-dev
+export PATH=/opt/qt511/bin:$PATH
+
+- Install make
+
+sudo apt install make
+
+- Build
+
+cd litecash
+cmake -DCMAKE_BUILD_TYPE=Release . && make -j4
+You'll find binaries in litecash/..., wallet/..., ui/..., explorer/... subfolders.
+
+- First time running a node:
+
+cd litecash/litecash
+./litecash-node --peer 167.86.107.199:10000
+
 Fedora 29
 ---------
 Install dependencies
