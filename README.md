@@ -3,7 +3,7 @@
 
 Litecash is the next generation scalable, confidential cryptocurrency based on an elegant and innovative [Mimblewimble protocol](https://docs.beam.mw/Mimblewimble.pdf).
 
-[telegram](https://t.me/litecashgroup) | [Litecash Discord](https://discord.gg/kga9sgg)
+[Telegram](https://t.me/litecashgroup) | [Litecash Discord](https://discord.gg/kga9sgg)
 
 
 **MAINNET IS LAUNCHED & ACTIVE!** 
