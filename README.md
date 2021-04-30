@@ -15,6 +15,7 @@ https://lite-cash.com
 Peers:
 
 explorer.lite-cash.com:10000
+
 ca1.lite-cash.com:10000
 
 
