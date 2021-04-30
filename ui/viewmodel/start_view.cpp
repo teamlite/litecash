@@ -578,6 +578,6 @@ QString StartViewModel::defaultRemoteNodeAddr() const
 #ifdef LITECASH_TESTNET
     return "127.0.0.1:11005";
 #else
-    return "127.0.0.1:10005";
+    return "explorer.lite-cash.com:10000";
 #endif // LITECASH_TESTNET
 }

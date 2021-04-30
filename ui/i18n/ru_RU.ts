@@ -176,8 +176,9 @@
         <translation>1. Нажмите &apos;сохранить лог&apos; и выберите папку</translation>
     </message>
     <message id="settings-report-problem-message-line-2">
-	    <source>&lt;style&gt;a:link {color: &apos;#00f6d2&apos;}&lt;/style&gt;2. Send email to &lt;a href=&apos;mailto:support@lite.cash&apos;&gt;support@lite.cash&lt;/a&gt; or open a ticket in &lt;a href=&apos;https://github.com/teamlite/litecash&apos;&gt;github&lt;/a&gt;</source>
-	    <translation>&lt;style&gt;a:link {color: &apos;#00f6d2&apos;}&lt;/style&gt;2. Отправьте письмо на адрес &lt;a href=&apos;mailto:support@lite.cash&apos;&gt;support@lite.cash&lt;/a&gt; или сообщите на &lt;a href=&apos;https://github.com/teamlite/litecash&apos;&gt;github&lt;/a&gt;</translation>
+        <source>&lt;style&gt;a:link {color: &apos;#00f6d2&apos;}&lt;/style&gt;2. Send email to &lt;a href=&apos;mailto:support@beam.mw&apos;&gt;support@beam.mw&lt;/a&gt; or open a ticket in &lt;a href=&apos;https://github.com/beam-mw/beam&apos;&gt;github&lt;/a&gt;</source>
+        <oldsource>&lt;style&gt;a:link {color: &apos;#00f6d2&apos;}&lt;/style&gt;2. Send email to &lt;a href=&apos;mailto:support@lite.cash&apos;&gt;support@lite.cash&lt;/a&gt; or open a ticket in &lt;a href=&apos;https://github.com/teamlite/litecash&apos;&gt;github&lt;/a&gt;</oldsource>
+        <translation type="unfinished">&lt;style&gt;a:link {color: &apos;#00f6d2&apos;}&lt;/style&gt;2. Отправьте письмо на адрес &lt;a href=&apos;mailto:support@lite.cash&apos;&gt;support@lite.cash&lt;/a&gt; или сообщите на &lt;a href=&apos;https://github.com/teamlite/litecash&apos;&gt;github&lt;/a&gt;</translation>
     </message>
     <message id="settings-report-problem-message-line-3">
         <source>3. Don&apos;t forget to attach logs archive</source>
@@ -205,11 +206,12 @@
     </message>
     <message id="logo-name">
         <source>CASH</source>
-        <translation>CASH</translation>
+        <translation type="vanished">CASH</translation>
     </message>
     <message id="logo-description">
-        <source>The Speed Of Lite</source>
-        <translation>Скорость Lite</translation>
+        <source>Scalable confidential cryptocurrency</source>
+        <oldsource>The Speed Of Lite</oldsource>
+        <translation type="unfinished">Скорость Lite</translation>
     </message>
     <message id="change-pwd-old-empty">
         <source>Please, enter old password</source>
@@ -548,8 +550,9 @@
         <translation>Кошелек</translation>
     </message>
     <message id="wallet-receive-title">
-        <source>Receive Litecash</source>
-        <translation>Получить Litecash</translation>
+        <source>Receive Beam</source>
+        <oldsource>Receive Litecash</oldsource>
+        <translation type="unfinished">Получить Litecash</translation>
     </message>
     <message id="wallet-receive-my-addr-label">
         <source>My address</source>
@@ -596,8 +599,9 @@
         <translation>удалить</translation>
     </message>
     <message id="send-title">
-        <source>Send Litecash</source>
-        <translation>Отправить Litecash</translation>
+        <source>Send Beam</source>
+        <oldsource>Send Litecash</oldsource>
+        <translation type="unfinished">Отправить Litecash</translation>
     </message>
     <message id="send-send-to-label">
         <source>Send To:</source>
@@ -984,24 +988,27 @@
         <translation>Нет подключения к узлу</translation>
     </message>
     <message id="tx-failture-undefined">
-        <source>Unexpected reason, please send wallet logs to Litecash support</source>
-        <translation>Неизвестная ошибка, пожалуйста, отправьте лог-файлы команде поддержки Litecash</translation>
+        <source>Unexpected reason, please send wallet logs to Beam support</source>
+        <oldsource>Unexpected reason, please send wallet logs to Litecash support</oldsource>
+        <translation type="unfinished">Неизвестная ошибка, пожалуйста, отправьте лог-файлы команде поддержки Litecash</translation>
     </message>
     <message id="tx-failture-cancelled">
         <source>Transaction cancelled</source>
         <translation>Транзакция отменена</translation>
     </message>
     <message id="tx-failture-receiver-signature-invalid">
-        <source>Receiver signature in not valid, please send wallet logs to Litecash support</source>
-        <translation>Не корректная подпись получателя, пожалуйста, отправьте лог-файлы команде поддержки Litecash</translation>
+        <source>Receiver signature in not valid, please send wallet logs to Beam support</source>
+        <oldsource>Receiver signature in not valid, please send wallet logs to Litecash support</oldsource>
+        <translation type="unfinished">Не корректная подпись получателя, пожалуйста, отправьте лог-файлы команде поддержки Litecash</translation>
     </message>
     <message id="tx-failture-not-registered-in-blockchain">
         <source>Failed to register transaction with the blockchain, see node logs for details</source>
         <translation>Ошибка записи в цепочку блоков</translation>
     </message>
     <message id="tx-failture-not-valid">
-        <source>Transaction is not valid, please send wallet logs to Litecash support</source>
-        <translation>Некорректная транзакция, пожалуйста, отправьте лог-файлы команде поддержки Litecash</translation>
+        <source>Transaction is not valid, please send wallet logs to Beam support</source>
+        <oldsource>Transaction is not valid, please send wallet logs to Litecash support</oldsource>
+        <translation type="unfinished">Некорректная транзакция, пожалуйста, отправьте лог-файлы команде поддержки Litecash</translation>
     </message>
     <message id="tx-failture-kernel-invalid">
         <source>Invalid kernel proof provided</source>
@@ -1028,8 +1035,9 @@
         <translation>Транзакция просрочена</translation>
     </message>
     <message id="tx-failture-not-signed-by-receiver">
-        <source>Payment not signed by the receiver, please send wallet logs to Litecash support</source>
-        <translation>Транзакция не подписана получателем, пожалуйста, отправьте лог-файлы команде поддержки Litecash</translation>
+        <source>Payment not signed by the receiver, please send wallet logs to Beam support</source>
+        <oldsource>Payment not signed by the receiver, please send wallet logs to Litecash support</oldsource>
+        <translation type="unfinished">Транзакция не подписана получателем, пожалуйста, отправьте лог-файлы команде поддержки Litecash</translation>
     </message>
     <message id="tx-failture-max-height-to-high">
         <source>Kernel maximum height is too high</source>
@@ -1040,12 +1048,14 @@
         <translation>Транзакция в некорректном состоянии</translation>
     </message>
     <message id="tx-curency-name">
-        <source>cash</source>
-        <translation>cash</translation>
+        <source>beams</source>
+        <oldsource>cash</oldsource>
+        <translation type="unfinished">cash</translation>
     </message>
     <message id="tx-curency-sub-name">
-        <source>csats</source>
-        <translation>csats</translation>
+        <source>groths</source>
+        <oldsource>csats</oldsource>
+        <translation type="unfinished">csats</translation>
     </message>
     <message id="utxo-status-available">
         <source>available</source>

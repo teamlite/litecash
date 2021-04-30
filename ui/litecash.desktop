@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Name=Litecash Wallet
+Comment=The Speed Of Lite
+Exec=/usr/bin/LitecashWallet %U
+Icon=litecash
+Terminal=false
+Type=Application
+Categories=Network
+MimeType=application/x-beam-item;
+GenericName=Litecash Wallet

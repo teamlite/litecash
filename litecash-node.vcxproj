@@ -1,0 +1,375 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{01527B4F-0FE9-3549-975E-13576272D5C1}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
+    <Keyword>Win32Proj</Keyword>
+    <Platform>x64</Platform>
+    <ProjectName>litecash-node</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\LCash\litecash\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">litecash-node.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">litecash-node</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\LCash\litecash\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">litecash-node.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">litecash-node</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">D:\Projects\LCash\litecash\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">litecash-node.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">litecash-node</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">D:\Projects\LCash\litecash\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">litecash-node.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">litecash-node</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>D:\Projects\LCash\litecash;D:\Projects\LCash\litecash\3rdparty;D:\Projects\LCash\litecash\3rdparty\libuv\include;D:\Projects\LCash\litecash\3rdparty\secp256k1-zkp\src;E:\Strawberry\c\include;D:\boost_1_68_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4100;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;DEBUG_MESSAGES_IN_RELEASE_MODE;LITECASH_MAINNET;UV_INTERNAL;BOOST_ALL_DYN_LINK;NOMINMAX;PROJECT_SOURCE_DIR="D:/Projects/LCash/litecash";CMAKE_INTDIR="Debug";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;DEBUG_MESSAGES_IN_RELEASE_MODE;LITECASH_MAINNET;UV_INTERNAL;BOOST_ALL_DYN_LINK;NOMINMAX;PROJECT_SOURCE_DIR=\"D:/Projects/LCash/litecash\";CMAKE_INTDIR=\"Debug\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\Projects\LCash\litecash;D:\Projects\LCash\litecash\3rdparty;D:\Projects\LCash\litecash\3rdparty\libuv\include;D:\Projects\LCash\litecash\3rdparty\secp256k1-zkp\src;E:\Strawberry\c\include;D:\boost_1_68_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>D:\Projects\LCash\litecash;D:\Projects\LCash\litecash\3rdparty;D:\Projects\LCash\litecash\3rdparty\libuv\include;D:\Projects\LCash\litecash\3rdparty\secp256k1-zkp\src;E:\Strawberry\c\include;D:\boost_1_68_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>..\node\Debug\node.lib;..\pow\Debug\external_pow.lib;..\utility\Debug\cli.lib;..\3rdparty\sqlite\Debug\sqlite.lib;..\core\Debug\core.lib;..\p2p\Debug\p2p.lib;..\utility\Debug\utility.lib;..\mnemonic\Debug\mnemonic.lib;..\core\Debug\core.lib;..\p2p\Debug\p2p.lib;..\utility\Debug\utility.lib;..\mnemonic\Debug\mnemonic.lib;..\3rdparty\libuv\Debug\uv_a.lib;advapi32.lib;iphlpapi.lib;psapi.lib;shell32.lib;user32.lib;userenv.lib;ws2_32.lib;C:\Program Files\OpenSSL-Win64\lib\VC\libssl64MDd.lib;C:\Program Files\OpenSSL-Win64\lib\VC\libcrypto64MDd.lib;D:\boost_1_68_0\stage\lib\boost_filesystem-vc141-mt-gd-x64-1_68.lib;D:\boost_1_68_0\stage\lib\boost_system-vc141-mt-gd-x64-1_68.lib;..\pow\Debug\pow.lib;..\utility\Debug\crypto.lib;D:\boost_1_68_0\stage\lib\boost_program_options-vc141-mt-gd-x64-1_68.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:/Projects/LCash/litecash/optimized;D:/Projects/LCash/litecash/optimized/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MD.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MD.lib/$(Configuration);D:/Projects/LCash/litecash/debug;D:/Projects/LCash/litecash/debug/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MDd.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MDd.lib/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MD.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MD.lib/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MDd.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MDd.lib/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>D:/Projects/LCash/litecash/Debug/litecash-node.lib</ImportLibrary>
+      <ProgramDataBaseFile>D:/Projects/LCash/litecash/Debug/litecash-node.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>D:\Projects\LCash\litecash;D:\Projects\LCash\litecash\3rdparty;D:\Projects\LCash\litecash\3rdparty\libuv\include;D:\Projects\LCash\litecash\3rdparty\secp256k1-zkp\src;E:\Strawberry\c\include;D:\boost_1_68_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <DisableSpecificWarnings>4100;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;DEBUG_MESSAGES_IN_RELEASE_MODE;LITECASH_MAINNET;UV_INTERNAL;BOOST_ALL_DYN_LINK;NOMINMAX;PROJECT_SOURCE_DIR="D:/Projects/LCash/litecash";CMAKE_INTDIR="Release";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;DEBUG_MESSAGES_IN_RELEASE_MODE;LITECASH_MAINNET;UV_INTERNAL;BOOST_ALL_DYN_LINK;NOMINMAX;PROJECT_SOURCE_DIR=\"D:/Projects/LCash/litecash\";CMAKE_INTDIR=\"Release\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\Projects\LCash\litecash;D:\Projects\LCash\litecash\3rdparty;D:\Projects\LCash\litecash\3rdparty\libuv\include;D:\Projects\LCash\litecash\3rdparty\secp256k1-zkp\src;E:\Strawberry\c\include;D:\boost_1_68_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>D:\Projects\LCash\litecash;D:\Projects\LCash\litecash\3rdparty;D:\Projects\LCash\litecash\3rdparty\libuv\include;D:\Projects\LCash\litecash\3rdparty\secp256k1-zkp\src;E:\Strawberry\c\include;D:\boost_1_68_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>..\node\Release\node.lib;..\pow\Release\external_pow.lib;..\utility\Release\cli.lib;..\3rdparty\sqlite\Release\sqlite.lib;..\core\Release\core.lib;..\p2p\Release\p2p.lib;..\utility\Release\utility.lib;..\mnemonic\Release\mnemonic.lib;..\core\Release\core.lib;..\p2p\Release\p2p.lib;..\utility\Release\utility.lib;..\mnemonic\Release\mnemonic.lib;..\3rdparty\libuv\Release\uv_a.lib;advapi32.lib;iphlpapi.lib;psapi.lib;shell32.lib;user32.lib;userenv.lib;ws2_32.lib;C:\Program Files\OpenSSL-Win64\lib\VC\libssl64MD.lib;C:\Program Files\OpenSSL-Win64\lib\VC\libcrypto64MD.lib;D:\boost_1_68_0\stage\lib\boost_filesystem-vc141-mt-x64-1_68.lib;D:\boost_1_68_0\stage\lib\boost_system-vc141-mt-x64-1_68.lib;..\pow\Release\pow.lib;..\utility\Release\crypto.lib;D:\boost_1_68_0\stage\lib\boost_program_options-vc141-mt-x64-1_68.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:/Projects/LCash/litecash/optimized;D:/Projects/LCash/litecash/optimized/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MD.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MD.lib/$(Configuration);D:/Projects/LCash/litecash/debug;D:/Projects/LCash/litecash/debug/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MDd.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MDd.lib/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MD.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MD.lib/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MDd.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MDd.lib/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>D:/Projects/LCash/litecash/Release/litecash-node.lib</ImportLibrary>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ProgramDataBaseFile>D:/Projects/LCash/litecash/Release/litecash-node.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>D:\Projects\LCash\litecash;D:\Projects\LCash\litecash\3rdparty;D:\Projects\LCash\litecash\3rdparty\libuv\include;D:\Projects\LCash\litecash\3rdparty\secp256k1-zkp\src;E:\Strawberry\c\include;D:\boost_1_68_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <DisableSpecificWarnings>4100;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;DEBUG_MESSAGES_IN_RELEASE_MODE;LITECASH_MAINNET;UV_INTERNAL;BOOST_ALL_DYN_LINK;NOMINMAX;PROJECT_SOURCE_DIR="D:/Projects/LCash/litecash";CMAKE_INTDIR="MinSizeRel";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;DEBUG_MESSAGES_IN_RELEASE_MODE;LITECASH_MAINNET;UV_INTERNAL;BOOST_ALL_DYN_LINK;NOMINMAX;PROJECT_SOURCE_DIR=\"D:/Projects/LCash/litecash\";CMAKE_INTDIR=\"MinSizeRel\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\Projects\LCash\litecash;D:\Projects\LCash\litecash\3rdparty;D:\Projects\LCash\litecash\3rdparty\libuv\include;D:\Projects\LCash\litecash\3rdparty\secp256k1-zkp\src;E:\Strawberry\c\include;D:\boost_1_68_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>D:\Projects\LCash\litecash;D:\Projects\LCash\litecash\3rdparty;D:\Projects\LCash\litecash\3rdparty\libuv\include;D:\Projects\LCash\litecash\3rdparty\secp256k1-zkp\src;E:\Strawberry\c\include;D:\boost_1_68_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>..\node\MinSizeRel\node.lib;..\pow\MinSizeRel\external_pow.lib;..\utility\MinSizeRel\cli.lib;..\3rdparty\sqlite\MinSizeRel\sqlite.lib;..\core\MinSizeRel\core.lib;..\p2p\MinSizeRel\p2p.lib;..\utility\MinSizeRel\utility.lib;..\mnemonic\MinSizeRel\mnemonic.lib;..\core\MinSizeRel\core.lib;..\p2p\MinSizeRel\p2p.lib;..\utility\MinSizeRel\utility.lib;..\mnemonic\MinSizeRel\mnemonic.lib;..\3rdparty\libuv\MinSizeRel\uv_a.lib;advapi32.lib;iphlpapi.lib;psapi.lib;shell32.lib;user32.lib;userenv.lib;ws2_32.lib;C:\Program Files\OpenSSL-Win64\lib\VC\libssl64MD.lib;C:\Program Files\OpenSSL-Win64\lib\VC\libcrypto64MD.lib;D:\boost_1_68_0\stage\lib\boost_filesystem-vc141-mt-x64-1_68.lib;D:\boost_1_68_0\stage\lib\boost_system-vc141-mt-x64-1_68.lib;..\pow\MinSizeRel\pow.lib;..\utility\MinSizeRel\crypto.lib;D:\boost_1_68_0\stage\lib\boost_program_options-vc141-mt-x64-1_68.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:/Projects/LCash/litecash/optimized;D:/Projects/LCash/litecash/optimized/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MD.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MD.lib/$(Configuration);D:/Projects/LCash/litecash/debug;D:/Projects/LCash/litecash/debug/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MDd.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MDd.lib/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MD.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MD.lib/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MDd.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MDd.lib/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>D:/Projects/LCash/litecash/MinSizeRel/litecash-node.lib</ImportLibrary>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ProgramDataBaseFile>D:/Projects/LCash/litecash/MinSizeRel/litecash-node.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>D:\Projects\LCash\litecash;D:\Projects\LCash\litecash\3rdparty;D:\Projects\LCash\litecash\3rdparty\libuv\include;D:\Projects\LCash\litecash\3rdparty\secp256k1-zkp\src;E:\Strawberry\c\include;D:\boost_1_68_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4100;4324</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <UseFullPaths>false</UseFullPaths>
+      <WarningLevel>Level4</WarningLevel>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;DEBUG_MESSAGES_IN_RELEASE_MODE;LITECASH_MAINNET;UV_INTERNAL;BOOST_ALL_DYN_LINK;NOMINMAX;PROJECT_SOURCE_DIR="D:/Projects/LCash/litecash";CMAKE_INTDIR="RelWithDebInfo";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;DEBUG_MESSAGES_IN_RELEASE_MODE;LITECASH_MAINNET;UV_INTERNAL;BOOST_ALL_DYN_LINK;NOMINMAX;PROJECT_SOURCE_DIR=\"D:/Projects/LCash/litecash\";CMAKE_INTDIR=\"RelWithDebInfo\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>D:\Projects\LCash\litecash;D:\Projects\LCash\litecash\3rdparty;D:\Projects\LCash\litecash\3rdparty\libuv\include;D:\Projects\LCash\litecash\3rdparty\secp256k1-zkp\src;E:\Strawberry\c\include;D:\boost_1_68_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>D:\Projects\LCash\litecash;D:\Projects\LCash\litecash\3rdparty;D:\Projects\LCash\litecash\3rdparty\libuv\include;D:\Projects\LCash\litecash\3rdparty\secp256k1-zkp\src;E:\Strawberry\c\include;D:\boost_1_68_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>..\node\RelWithDebInfo\node.lib;..\pow\RelWithDebInfo\external_pow.lib;..\utility\RelWithDebInfo\cli.lib;..\3rdparty\sqlite\RelWithDebInfo\sqlite.lib;..\core\RelWithDebInfo\core.lib;..\p2p\RelWithDebInfo\p2p.lib;..\utility\RelWithDebInfo\utility.lib;..\mnemonic\RelWithDebInfo\mnemonic.lib;..\core\RelWithDebInfo\core.lib;..\p2p\RelWithDebInfo\p2p.lib;..\utility\RelWithDebInfo\utility.lib;..\mnemonic\RelWithDebInfo\mnemonic.lib;..\3rdparty\libuv\RelWithDebInfo\uv_a.lib;advapi32.lib;iphlpapi.lib;psapi.lib;shell32.lib;user32.lib;userenv.lib;ws2_32.lib;C:\Program Files\OpenSSL-Win64\lib\VC\libssl64MD.lib;C:\Program Files\OpenSSL-Win64\lib\VC\libcrypto64MD.lib;D:\boost_1_68_0\stage\lib\boost_filesystem-vc141-mt-x64-1_68.lib;D:\boost_1_68_0\stage\lib\boost_system-vc141-mt-x64-1_68.lib;..\pow\RelWithDebInfo\pow.lib;..\utility\RelWithDebInfo\crypto.lib;D:\boost_1_68_0\stage\lib\boost_program_options-vc141-mt-x64-1_68.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:/Projects/LCash/litecash/optimized;D:/Projects/LCash/litecash/optimized/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MD.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MD.lib/$(Configuration);D:/Projects/LCash/litecash/debug;D:/Projects/LCash/litecash/debug/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MDd.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libssl64MDd.lib/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MD.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MD.lib/$(Configuration);C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MDd.lib;C:/Program Files/OpenSSL-Win64/lib/VC/libcrypto64MDd.lib/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImportLibrary>D:/Projects/LCash/litecash/RelWithDebInfo/litecash-node.lib</ImportLibrary>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ProgramDataBaseFile>D:/Projects/LCash/litecash/RelWithDebInfo/litecash-node.pdb</ProgramDataBaseFile>
+      <SubSystem>Console</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="D:\Projects\LCash\litecash\litecash\CMakeLists.txt">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule D:/Projects/LCash/litecash/litecash/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SD:/Projects/LCash/litecash -BD:/Projects/LCash --check-stamp-file D:/Projects/LCash/litecash/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\LCash\litecash\version.h.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Projects\LCash\litecash\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule D:/Projects/LCash/litecash/litecash/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SD:/Projects/LCash/litecash -BD:/Projects/LCash --check-stamp-file D:/Projects/LCash/litecash/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\LCash\litecash\version.h.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Projects\LCash\litecash\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule D:/Projects/LCash/litecash/litecash/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SD:/Projects/LCash/litecash -BD:/Projects/LCash --check-stamp-file D:/Projects/LCash/litecash/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">D:\Projects\LCash\litecash\version.h.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">D:\Projects\LCash\litecash\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule D:/Projects/LCash/litecash/litecash/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SD:/Projects/LCash/litecash -BD:/Projects/LCash --check-stamp-file D:/Projects/LCash/litecash/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">D:\Projects\LCash\litecash\version.h.in;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">D:\Projects\LCash\litecash\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="D:\Projects\LCash\litecash\litecash\cli.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="D:\Projects\LCash\ZERO_CHECK.vcxproj">
+      <Project>{D48F37D7-C9BF-34EE-9F79-CFE5F402BB78}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="D:\Projects\LCash\utility\cli.vcxproj">
+      <Project>{415A7C4E-E87B-31A6-8A6B-4A87A74FB47D}</Project>
+      <Name>cli</Name>
+    </ProjectReference>
+    <ProjectReference Include="D:\Projects\LCash\utility\crypto.vcxproj">
+      <Project>{A7C289E8-E0DD-3403-AD80-875115DBE819}</Project>
+      <Name>crypto</Name>
+    </ProjectReference>
+    <ProjectReference Include="D:\Projects\LCash\pow\external_pow.vcxproj">
+      <Project>{15C114C1-0883-3984-A67F-A21879BE7CA4}</Project>
+      <Name>external_pow</Name>
+    </ProjectReference>
+    <ProjectReference Include="D:\Projects\LCash\mnemonic\mnemonic.vcxproj">
+      <Project>{892B5254-E2BC-31DB-B32C-03132EC94458}</Project>
+      <Name>mnemonic</Name>
+    </ProjectReference>
+    <ProjectReference Include="D:\Projects\LCash\node\node.vcxproj">
+      <Project>{B2D18E2A-2A92-3A1E-80D1-C3B45EEB3837}</Project>
+      <Name>node</Name>
+    </ProjectReference>
+    <ProjectReference Include="D:\Projects\LCash\pow\pow.vcxproj">
+      <Project>{4D126CA5-E8B5-3C51-A8C8-8BEA8651F5D1}</Project>
+      <Name>pow</Name>
+    </ProjectReference>
+    <ProjectReference Include="D:\Projects\LCash\3rdparty\sqlite\sqlite.vcxproj">
+      <Project>{5236E647-1204-334A-80AE-447C9EDD2292}</Project>
+      <Name>sqlite</Name>
+    </ProjectReference>
+    <ProjectReference Include="D:\Projects\LCash\3rdparty\libuv\uv_a.vcxproj">
+      <Project>{583E3D59-4D89-3732-ACFA-82A0405812ED}</Project>
+      <Name>uv_a</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

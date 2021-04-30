@@ -1294,7 +1294,7 @@ Item
                             text: qsTrId("start-node-integrated-radio")
                             ButtonGroup.group: nodePreferencesGroup
                             font.pixelSize: 14
-                            checked: true
+                            checked: false
                         }
                         Column {
                             id: localNodePanel
@@ -1375,7 +1375,8 @@ Item
                                 text: qsTrId("start-node-remote-radio")
                                 ButtonGroup.group: nodePreferencesGroup
                                 font.pixelSize: 14
-                                enabled: viewModel.isRecoveryMode == false
+                                enabled: true
+                                checked: true
                             }
                             SFTextInput {
                                 id:remoteNodeAddrInput
