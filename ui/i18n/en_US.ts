@@ -144,8 +144,8 @@
         <translation>1. Click &apos;Save wallet logs&apos; and choose a destination folder for log archive</translation>
     </message>
     <message id="settings-report-problem-message-line-2">
-	    <source>&lt;style&gt;a:link {color: &apos;#00f6d2&apos;}&lt;/style&gt;2. Send email to &lt;a href=&apos;mailto:support@lite.cash&apos;&gt;support@lite.cash&lt;/a&gt; or open a ticket in &lt;a href=&apos;https://github.com/teamlite/litecash&apos;&gt;github&lt;/a&gt;</source>
-	    <translation>&lt;style&gt;a:link {color: &apos;#00f6d2&apos;}&lt;/style&gt;2. Send email to &lt;a href=&apos;mailto:support@lite.cash&apos;&gt;support@lite.cash&lt;/a&gt; or open a ticket in &lt;a href=&apos;https://github.com/teamlite/litecash&apos;&gt;github&lt;/a&gt;</translation>
+	    <source>&lt;style&gt;a:link {color: &apos;#00f6d2&apos;}&lt;/style&gt;2. Visit the &lt;a href=&apos;https://t.me/litecashtechnology&apos;&gt;Telegram Channel&lt;/a&gt; or open a ticket in &lt;a href=&apos;https://github.com/Litecash-Dev/litecash&apos;&gt;github&lt;/a&gt;</source>
+	    <translation>&lt;style&gt;a:link {color: &apos;#00f6d2&apos;}&lt;/style&gt;2. Visit the &lt;a href=&apos;https://t.me/litecashtechnology&apos;&gt;Telegram Channel&lt;/a&gt; or open a ticket in &lt;a href=&apos;https://github.com/Litecash-Dev/litecash&apos;&gt;github&lt;/a&gt;</translation>
     </message>
     <message id="settings-report-problem-message-line-3">
         <source>3. Don&apos;t forget to attach logs archive</source>
