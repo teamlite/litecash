@@ -52,4 +52,3 @@ ca1.lite-cash.com:10000
 - Graphical Wallet Application for Linux, Mac and Windows platforms
 - Offline transactions using Secure BBS system
 - Original Teamlite Github account holder unavailable, necessitating a soft fork to https://github.com/Litecash-Dev/litecash existing Litecash nodes unaffected by fork.
-- test entry
