@@ -6,8 +6,7 @@ Litecash is the next generation scalable, confidential cryptocurrency based on a
 [Telegram](https://t.me/litecashgroup) | [Litecash Discord](https://discord.gg/kga9sgg)
 
 
-**MAINNET IS LAUNCHED & ACTIVE!** 
-
+Website:
 
 https://lite-cash.com
 
