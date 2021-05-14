@@ -852,7 +852,7 @@
         <translation>Установить соединение с узлом</translation>
     </message>
     <message id="start-node-integrated-radio">
-        <source>Run integrated node (recommended)</source>
+        <source>Run integrated node</source>
         <translation>Запускать встроеный узел</translation>
     </message>
     <message id="start-node-port-label">
@@ -868,7 +868,7 @@
         <translation>Подключиться к случайному удаленному узлу</translation>
     </message>
     <message id="start-node-remote-radio">
-        <source>Connect to specific remote node</source>
+        <source>Connect to specific remote node (recommended)</source>
         <translation>Подключиться к удаленному узлу</translation>
     </message>
     <message id="start-finish-button-restore">

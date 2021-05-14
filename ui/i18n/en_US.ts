@@ -816,8 +816,8 @@
         <translation>Setup node connectivity</translation>
     </message>
     <message id="start-node-integrated-radio">
-        <source>Run integrated node (recommended)</source>
-        <translation>Run integrated node (recommended)</translation>
+        <source>Run integrated node</source>
+        <translation>Run integrated node</translation>
     </message>
     <message id="start-node-port-label">
         <source>Enter port to listen</source>
@@ -832,8 +832,8 @@
         <translation>Connect to random remote node</translation>
     </message>
     <message id="start-node-remote-radio">
-        <source>Connect to specific remote node</source>
-        <translation>Connect to specific remote node</translation>
+        <source>Connect to specific remote node (recommended)</source>
+        <translation>Connect to specific remote node (recommended)</translation>
     </message>
     <message id="start-finish-button-restore">
         <source>restore wallet</source>
