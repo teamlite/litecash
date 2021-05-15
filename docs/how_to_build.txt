@@ -52,7 +52,7 @@ Mac
 ---
 Install Brew Package Manager.
 Installed necessary packages using brew install openssl boost cmake command.
-Download and install QT5.11 from the official website https://download.qt.io/official_releases/qt/5.11/5.11.0/qt-opensource-mac-x64-5.11.0.dmg.mirrorlist 
+Download and install QT5.11 from the official website https://download.qt.io/new_archive/qt/5.11/5.11.0/qt-opensource-mac-x64-5.11.0.dmg.mirrorlist 
 Add export OPENSSL_ROOT_DIR="/usr/local/opt/openssl" and export PATH=/Users/<username>/Qt5.11.0/5.11.0/clang_64/bin:$PATH to the Environment Variables.
 Go to Litecash project folder and call cmake -DCMAKE_BUILD_TYPE=Release . && make -j4.
 You'll find binaries in litecash/..., wallet/..., ui/..., explorer/... subfolders.
